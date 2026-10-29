@@ -1,0 +1,66 @@
+# v9v: the v9s recipe on robot model M7 (joint limits v2) with the action mapped onto the full physical range.
+# v9u (same recipe on M7, action scale +-45 / hips +-30) was stopped after 7 minutes: with that scale the policy could
+# not reach the new limits (femurs +-50, tibias +75, hips -45) and its goals were still clipped to the range
+# (head +35, tibias -35). Sachin (2026-10-23): what the policy learns is the goal sent to the robot, no clipping.
+# Change: actions.scale_to_range true -> per joint, centre = (lo + hi) / 2 and scale = (hi - lo) / 2 of
+# robot_config joints.range_deg, so a in [-1, 1] spans exactly the range and the range clip never acts. The coupled
+# knee limit (femur - tibia -55..+37 deg) and the servo speed ramp stay, in training and on the robot alike.
+# Interface changes: head centre -5 / scale 40, hips -19 / 26, femurs 0 / 50, tibias +20 / 55 deg (v9s: 0 / 45, hips 0 / 30).
+# Risk: the tibia scale grows 22 % (v9e: a wider tibia scale doubled the exploration noise and failed).
+# Targets: MuJoCo survival >= 35/36, >= 90 % of 0.10, >= 60 % of 0.10 at mu 0.15 / 0.20 / 0.27; no joint at a range
+# end > 20 %; hips mean within +-5 deg; scorecard >= 8/11; real wood >= 36 % with |yaw| <= 25 deg in every run,
+# carpet >= 70 %.
+# Run: walk_rl/run_experiment.sh v9v walk_rl/experiments/v9v_full_range.yaml v9s v9t
+sim:
+  ground_friction: 0.1
+actuator:
+  model: lx16a
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  joint_limit_range_margin_deg: 3.0
+  foot_slip_point: sole
+  progress_gate_mode: tracking
+  progress_gate: [track_heading, track_yaw, roll_band, base_rock, base_acc, gait_contact]
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+    base_height: -1.0
+    leg_symmetry: -1.0
+    joint_pose: -0.5
+    foot_slip: -10.0
+observation:
+  imu_mount_offset_deg: 2.0
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+  symmetry:
+    mirror_loss_coef: 0.5
+domain_randomization:
+  actuator_model: # refit nominal: kp 4.56, Coulomb 0.116, no-load x0.775, stall x1.84
+    kp_scale_range: [0.75, 1.3]
+    deadband_deg_range: [0.1, 1.0]
+    latency_s_range: [0.0, 0.01]
+    armature_scale_range: [0.6, 1.6]
+    coulomb_friction_nm_range: [0.05, 0.3]
+    no_load_speed_scale_range: [0.6, 0.95]
+    stall_torque_scale_range: [1.4, 2.2]
+    bus_voltage_v_range: [6.6, 8.4]
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood, measured static mu 0.27 (tilt test 2026-10-21). PhysX averages robot and
+  # ground (sim.ground_friction 0.1) friction, so 0.14-1.6 here = 0.12-0.85 effective (v9o: 0.30-0.85)
+  friction_range: [0.14, 1.6]
+actions:
+  scale_to_range: true

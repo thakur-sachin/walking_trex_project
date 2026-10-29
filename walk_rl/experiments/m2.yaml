@@ -1,0 +1,66 @@
+# m2: m1 with swing clearance at the lowest sole corner (foot.clearance_mode sole, 12 mm target), swing-scuff penalty -0.5 and total-torque penalty -1.0 above 5 N m.
+# Cause: audit R1/R3/R4: the clearance term pays roll (v9t), swing scuffing is free, and the joint-speed term freezes or spares single joints; the real-like grid shows median swing clearance of the lowest sole point 0.0-0.7 mm for every tested policy (the soles drag).
+# Targets: real-like MuJoCo (lab3/rescore_reallike.sh): 0/48 falls, median >= 65 % and worst >= 50 % of 0.10, over stall <= 5 %, sum torque <= 4 N m; PhysX speed @0.10 >= 70 % and hard survival >= 0.85; swing clearance >= 5 mm.
+# Run: walk_rl/queue_experiments.sh (TRAIN_BACKEND=lab3 )
+sim:
+  ground_friction: 0.1
+actuator:
+  model: lx16a
+  drive_torque_limit: true
+  supply_sag: true
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+foot:
+  clearance_mode: sole
+  swing_clearance_target_m: 0.012
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  joint_limit_range_margin_deg: 3.0
+  foot_slip_point: sole
+  progress_gate_mode: tracking
+  progress_gate: [track_heading, track_yaw, roll_band, base_rock, base_acc, gait_contact]
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+    base_height: -1.0
+    leg_symmetry: -1.0
+    joint_pose: -0.5
+    foot_slip: -10.0
+    torque_sum: -1.0
+    swing_scuff: -0.5
+observation:
+  imu_delay_steps_range: [0, 2] # real attitude lags MuJoCo 40-80 ms
+  imu_mount_offset_deg: 2.0
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+  symmetry:
+    mirror_loss_coef: 0.5
+domain_randomization:
+  actuator_model: # refit nominal: kp 4.56, Coulomb 0.116, no-load x0.775, stall x1.84
+    kp_scale_range: [0.75, 1.3]
+    deadband_deg_range: [0.1, 1.0]
+    latency_s_range: [0.0, 0.01]
+    armature_scale_range: [0.6, 1.6]
+    coulomb_friction_nm_range: [0.05, 0.3]
+    no_load_speed_scale_range: [0.6, 0.95]
+    stall_torque_scale_range: [1.4, 2.2]
+    bus_voltage_v_range: [5.8, 7.2] # real walking: mean 6.72, p5 5.97 V
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood, measured static mu 0.27 (tilt test 2026-10-21). PhysX averages robot and
+  # ground (sim.ground_friction 0.1) friction, so 0.14-1.6 here = 0.12-0.85 effective (v9o: 0.30-0.85)
+  friction_range: [0.14, 1.6]
+actions:
+  scale_to_range: true
+  delay_steps_range: [0, 1] # the servo model at delay 0 already has the real 2-3 tick lag

@@ -1,0 +1,63 @@
+# v9t: v9s + a 4x foot-clearance reward, on robot model M6.
+# v9s on the real robot (2026-10-22): 0.36 m in 10 s on wood (36 %), > 0.70 m on carpet, same joint motion.
+# It shuffles: joint swing 2-3 deg, foot lift 6 mm in MuJoCo (v9o 10 mm, v9m 16 mm), so on wood the feet
+# slip. MuJoCo at mu 0.15-0.27 still gave it 61-87 %, so the sim does not punish a shuffle.
+# Cause: the swing_clearance reward (weight 2, 20 mm target) fell from 0.093 per step in v9o to 0.024 in
+# v9s; giving up foot lift costs ~0.14 reward per step against track_vx ~0.9, so the policy dropped it.
+# Change: reward.weights.swing_clearance 2 -> 8 (at v9o's clearance it is worth ~0.75 per step).
+# Targets: MuJoCo foot lift >= 12 mm on each foot (scorecard, median at 0.10); femur and tibia swing >= 4 deg
+# std at 0.10; keep v9s's: no joint at a range end > 20 %, hips within +-5 deg, MuJoCo >= 60 % of 0.10 at
+# mu 0.15 / 0.20 / 0.27 and survival >= 35/36, Isaac >= 60 % at 0.05; real wood floor >= 50 % of 0.10.
+# Run: walk_rl/run_experiment.sh v9t walk_rl/experiments/v9t_foot_lift.yaml v9o v9s
+sim:
+  ground_friction: 0.1
+actuator:
+  model: lx16a
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  joint_limit_range_margin_deg: 3.0
+  foot_slip_point: sole
+  progress_gate_mode: tracking
+  progress_gate: [track_heading, track_yaw, roll_band, base_rock, base_acc, gait_contact]
+  weights:
+    swing_clearance: 8.0
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+    base_height: -1.0
+    leg_symmetry: -1.0
+    joint_pose: -0.5
+    foot_slip: -10.0
+observation:
+  imu_mount_offset_deg: 2.0
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+  symmetry:
+    mirror_loss_coef: 0.5
+domain_randomization:
+  actuator_model: # refit nominal: kp 4.56, Coulomb 0.116, no-load x0.775, stall x1.84
+    kp_scale_range: [0.75, 1.3]
+    deadband_deg_range: [0.1, 1.0]
+    latency_s_range: [0.0, 0.01]
+    armature_scale_range: [0.6, 1.6]
+    coulomb_friction_nm_range: [0.05, 0.3]
+    no_load_speed_scale_range: [0.6, 0.95]
+    stall_torque_scale_range: [1.4, 2.2]
+    bus_voltage_v_range: [6.6, 8.4]
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood, measured static mu 0.27 (tilt test 2026-10-21). PhysX averages robot and
+  # ground (sim.ground_friction 0.1) friction, so 0.14-1.6 here = 0.12-0.85 effective (v9o: 0.30-0.85)
+  friction_range: [0.14, 1.6]

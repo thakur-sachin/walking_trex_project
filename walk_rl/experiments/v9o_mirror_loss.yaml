@@ -1,0 +1,57 @@
+# v9o: v9n + mirror loss (soft left/right symmetry of the policy).
+# Real v9n floor walk (2026-10-21, 0.10 m/s for 10 s): 0.25 m (25 %; v9m 41 %) and a steady +49 deg turn
+# (12, 15, 4, 11, 7 deg per 2 s; not correlated with the head/tail swing, r 0.1). The posture is
+# one-sided: head -14, tail +18, left hip +3 (61 % within 3 deg of its +7 end), right hip -9 deg.
+# MuJoCo shows the same offsets (head -15, tail +21) and Isaac the same step asymmetry (0.4 / 2.7 cm);
+# the real floor turns on it. Mirror augmentation (v9b) cost robustness; the mirror loss is the soft form.
+# Targets: Isaac step L/R within 2x, left hip at its end <= 20 %, head/tail mean within +-5 deg, the
+# v9n MuJoCo speed (>= 70 %) and IMU-offset robustness kept.
+# Run: python walk_rl/train.py --name v9o --iterations 1500 --task walk_rl/experiments/v9o_mirror_loss.yaml
+actuator:
+  model: lx16a
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  foot_slip_point: sole
+  progress_gate_mode: tracking
+  progress_gate: [track_heading, track_yaw, roll_band, base_rock, base_acc, gait_contact]
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+    base_height: -1.0
+    leg_symmetry: -1.0
+    joint_pose: -0.5
+    foot_slip: -10.0
+observation:
+  imu_mount_offset_deg: 2.0
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+  symmetry:
+    mirror_loss_coef: 0.5
+domain_randomization:
+  actuator_model: # refit nominal: kp 4.56, Coulomb 0.116, no-load x0.775, stall x1.84
+    kp_scale_range: [0.75, 1.3]
+    deadband_deg_range: [0.1, 1.0]
+    latency_s_range: [0.0, 0.01]
+    armature_scale_range: [0.6, 1.6]
+    coulomb_friction_nm_range: [0.05, 0.3]
+    no_load_speed_scale_range: [0.6, 0.95]
+    stall_torque_scale_range: [1.4, 2.2]
+    bus_voltage_v_range: [6.6, 8.4]
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood (Sachin): PhysX averages robot and ground (0.5) friction, so
+  # 0.1-1.2 here = 0.30-0.85 effective (was 0.45-0.85; PLA on wood is probably ~0.3-0.4)
+  friction_range: [0.1, 1.2]

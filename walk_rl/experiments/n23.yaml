@@ -1,0 +1,57 @@
+# n23: n21 with seed 1 (SEED=1).
+# Cause: n21 (full-range actions, no joint-speed term) scored 9/11 with 74 % at low mu and 18 mm foot lift; the n6 recipe fell from 8/11 to 5/11 on other seeds, so n21 needs a second seed before it counts.
+# Targets: MuJoCo survival 36/36, >= 75 % of 0.10 and >= 70 % at mu 0.15 / 0.20 / 0.27; foot lift >= 12 mm; PhysX hard >= 0.80; scorecard >= 8/11.
+# Run: walk_rl/queue_experiments.sh (TRAIN_BACKEND=lab3 SEED=1)
+sim:
+  ground_friction: 0.1
+actuator:
+  model: lx16a
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  joint_limit_range_margin_deg: 3.0
+  foot_slip_point: sole
+  progress_gate_mode: tracking
+  progress_gate: [track_heading, track_yaw, roll_band, base_rock, base_acc, gait_contact]
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+    base_height: -1.0
+    leg_symmetry: -1.0
+    joint_pose: -0.5
+    foot_slip: -10.0
+observation:
+  imu_mount_offset_deg: 2.0
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+  symmetry:
+    mirror_loss_coef: 0.5
+domain_randomization:
+  actuator_model: # refit nominal: kp 4.56, Coulomb 0.116, no-load x0.775, stall x1.84
+    kp_scale_range: [0.75, 1.3]
+    deadband_deg_range: [0.1, 1.0]
+    latency_s_range: [0.0, 0.01]
+    armature_scale_range: [0.6, 1.6]
+    coulomb_friction_nm_range: [0.05, 0.3]
+    no_load_speed_scale_range: [0.6, 0.95]
+    stall_torque_scale_range: [1.4, 2.2]
+    bus_voltage_v_range: [6.6, 8.4]
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood, measured static mu 0.27 (tilt test 2026-10-21). PhysX averages robot and
+  # ground (sim.ground_friction 0.1) friction, so 0.14-1.6 here = 0.12-0.85 effective (v9o: 0.30-0.85)
+  friction_range: [0.14, 1.6]
+actions:
+  scale_to_range: true

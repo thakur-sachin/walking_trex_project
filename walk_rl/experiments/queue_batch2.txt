@@ -1,0 +1,12 @@
+n14 walk_rl/experiments/n14.yaml TRAIN_BACKEND=lab3 SEED=2 -- v9w n6 n13
+n20 walk_rl/experiments/n20.yaml TRAIN_BACKEND=lab3 -- v9s n6 n9
+n21 walk_rl/experiments/n21.yaml TRAIN_BACKEND=lab3 -- v9s n6 n9
+n15 walk_rl/experiments/n15.yaml TRAIN_BACKEND=lab3 SEED=3 -- v9w n6 n13
+n23 walk_rl/experiments/n23.yaml TRAIN_BACKEND=lab3 SEED=1 -- v9w n6 n21
+n22 walk_rl/experiments/n22.yaml TRAIN_BACKEND=lab3 -- v9w n6 n21
+n24 walk_rl/experiments/n24.yaml TRAIN_BACKEND=lab3 SEED=2 -- v9w n6 n21
+n16 walk_rl/experiments/n16.yaml TRAIN_BACKEND=lab3 SEED=1 -- v9w n6 n11
+n17 walk_rl/experiments/n17.yaml TRAIN_BACKEND=lab3 SEED=0 -- v9w n6 n13
+n25 walk_rl/experiments/n25.yaml TRAIN_BACKEND=lab3 -- v9w n21 n23
+m1 walk_rl/experiments/m1.yaml TRAIN_BACKEND=lab3 -- v9w n21 n23
+m2 walk_rl/experiments/m2.yaml TRAIN_BACKEND=lab3 -- v9w n21 n23

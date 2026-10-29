@@ -1,0 +1,62 @@
+# v9u: the v9s recipe retrained on robot model M7 (joint limits v2, measured by hand 2026-10-23).
+# v9s is the best real policy so far on consistency: wood 36 % with the heading held in 4 of 4 runs (|yaw| <= 23 deg),
+# carpet > 70 %. v9t (more foot lift) made 50 % once on wood but turned > 65 deg in 4 of 5 wood runs.
+# Cause: the sim joint ranges were CAD estimates; the real stops differ (docs/figures/joint_limits_20261023.png):
+# head +35 (sim +45), tibias -35..+75 (sim -45..+90), femurs +-50 (sim +-45), hips -45..+7 (sim -30..+7). v9t sat
+# on the sim tibia -45 end 17 % of the walk, 10 deg past the real stop. The action scale is unchanged.
+# Change: none in the task (v9s_range_limit.yaml); robot model M6 -> M7.
+# Targets: MuJoCo survival >= 35/36, >= 90 % of 0.10 (v9s 105 %), >= 60 % of 0.10 at mu 0.15 / 0.20 / 0.27; no joint
+# at a range end > 20 %; hips mean within +-5 deg; scorecard >= 8/11; real wood >= 36 % with |yaw| <= 25 deg in
+# every run, carpet >= 70 %.
+# Run: walk_rl/run_experiment.sh v9u walk_rl/experiments/v9u_limits_v2.yaml v9s v9t
+sim:
+  ground_friction: 0.1
+actuator:
+  model: lx16a
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  joint_limit_range_margin_deg: 3.0
+  foot_slip_point: sole
+  progress_gate_mode: tracking
+  progress_gate: [track_heading, track_yaw, roll_band, base_rock, base_acc, gait_contact]
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+    base_height: -1.0
+    leg_symmetry: -1.0
+    joint_pose: -0.5
+    foot_slip: -10.0
+observation:
+  imu_mount_offset_deg: 2.0
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+  symmetry:
+    mirror_loss_coef: 0.5
+domain_randomization:
+  actuator_model: # refit nominal: kp 4.56, Coulomb 0.116, no-load x0.775, stall x1.84
+    kp_scale_range: [0.75, 1.3]
+    deadband_deg_range: [0.1, 1.0]
+    latency_s_range: [0.0, 0.01]
+    armature_scale_range: [0.6, 1.6]
+    coulomb_friction_nm_range: [0.05, 0.3]
+    no_load_speed_scale_range: [0.6, 0.95]
+    stall_torque_scale_range: [1.4, 2.2]
+    bus_voltage_v_range: [6.6, 8.4]
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood, measured static mu 0.27 (tilt test 2026-10-21). PhysX averages robot and
+  # ground (sim.ground_friction 0.1) friction, so 0.14-1.6 here = 0.12-0.85 effective (v9o: 0.30-0.85)
+  friction_range: [0.14, 1.6]
