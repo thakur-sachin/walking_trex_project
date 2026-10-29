@@ -1,0 +1,310 @@
+<?xml version="1.0" ?>
+<!-- Trex v2, written by redesign/make_trex_v2.py from redesign/trex_v2_design.yaml. Do not edit by hand. -->
+<robot name="Trex">
+
+<material name="silver">
+  <color rgba="0.700 0.700 0.700 1.000"/>
+</material>
+
+<link name="base_link">
+  <inertial>
+    <origin xyz="-0.009799 0.000034 0.240054" rpy="0 0 0"/>
+    <mass value="0.848746"/>
+    <inertia ixx="1.080359798e-03" iyy="1.537262569e-03" izz="1.871160247e-03" ixy="-2.070593144e-07" iyz="-2.180451786e-08" ixz="3.140222488e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.000000 -0.000000 -0.000000" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.000000 -0.000000 -0.000000" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="head">
+  <inertial>
+    <origin xyz="0.091806 -0.019391 0.012882" rpy="0 0 0"/>
+    <mass value="0.078000"/>
+    <inertia ixx="3.533617353e-05" iyy="1.511014329e-04" izz="1.386837870e-04" ixy="-2.126226217e-07" iyz="2.697819299e-07" ixz="-2.858139277e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.075102 -0.018229 -0.241619" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/head.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.075102 -0.018229 -0.241619" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/head.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="tail">
+  <inertial>
+    <origin xyz="-0.086621 -0.019899 -0.005955" rpy="0 0 0"/>
+    <mass value="0.038000"/>
+    <inertia ixx="6.747121980e-06" iyy="8.874321184e-05" izz="8.796491723e-05" ixy="-2.850351763e-06" iyz="-4.456554880e-08" ixz="-3.559220908e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.093508 -0.019726 -0.239673" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/tail.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.093508 -0.019726 -0.239673" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/tail.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="left_femur">
+  <inertial>
+    <origin xyz="-0.002518 -0.001354 -0.041213" rpy="0 0 0"/>
+    <mass value="0.078794"/>
+    <inertia ixx="3.692975260e-05" iyy="4.233829065e-05" izz="2.536334955e-05" ixy="-3.572142770e-06" iyz="-1.066207240e-06" ixz="-3.070769928e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.009500 -0.044000 -0.205380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_femur.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.009500 -0.044000 -0.205380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_femur.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="left_tibia">
+  <inertial>
+    <origin xyz="-0.003031 -0.000163 -0.042913" rpy="0 0 0"/>
+    <mass value="0.071834"/>
+    <inertia ixx="3.753363770e-05" iyy="4.240757058e-05" izz="2.302916925e-05" ixy="1.925991268e-07" iyz="1.058800474e-07" ixz="2.240402311e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.009500 -0.044000 -0.143380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_tibia.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.009500 -0.044000 -0.143380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_tibia.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="left_ankle">
+  <inertial>
+    <origin xyz="-0.014119 0.000328 -0.020291" rpy="0 0 0"/>
+    <mass value="0.029494"/>
+    <inertia ixx="2.080744598e-05" iyy="2.568167220e-05" izz="2.369556953e-05" ixy="6.353855049e-08" iyz="-1.305271780e-07" ixz="-1.231772115e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.009500 -0.044000 -0.078380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_ankle.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.009500 -0.044000 -0.078380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_ankle.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="left_foot">
+  <inertial>
+    <origin xyz="0.009790 0.000000 -0.016659" rpy="0 0 0"/>
+    <mass value="0.032708"/>
+    <inertia ixx="6.723557444e-06" iyy="4.064567141e-05" izz="4.349180548e-05" ixy="-2.401384918e-10" iyz="1.226634188e-11" ixz="4.102371953e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.009500 -0.044000 -0.024380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_foot.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.009500 -0.044000 -0.024380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_foot.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="right_femur">
+  <inertial>
+    <origin xyz="-0.002518 0.001354 -0.041213" rpy="0 0 0"/>
+    <mass value="0.078794"/>
+    <inertia ixx="3.692975260e-05" iyy="4.233829065e-05" izz="2.536334955e-05" ixy="3.572142770e-06" iyz="1.066207240e-06" ixz="-3.070769928e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.009500 0.044000 -0.205380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_femur.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.009500 0.044000 -0.205380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_femur.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="right_tibia">
+  <inertial>
+    <origin xyz="-0.003031 0.000163 -0.042913" rpy="0 0 0"/>
+    <mass value="0.071834"/>
+    <inertia ixx="3.753363770e-05" iyy="4.240757058e-05" izz="2.302916925e-05" ixy="-1.925991268e-07" iyz="-1.058800474e-07" ixz="2.240402311e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.009500 0.044000 -0.143380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_tibia.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.009500 0.044000 -0.143380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_tibia.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="right_ankle">
+  <inertial>
+    <origin xyz="-0.014119 -0.000328 -0.020291" rpy="0 0 0"/>
+    <mass value="0.029494"/>
+    <inertia ixx="2.080744598e-05" iyy="2.568167220e-05" izz="2.369556953e-05" ixy="-6.353855049e-08" iyz="1.305271780e-07" ixz="-1.231772115e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.009500 0.044000 -0.078380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_ankle.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.009500 0.044000 -0.078380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_ankle.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="right_foot">
+  <inertial>
+    <origin xyz="0.009790 -0.000000 -0.016659" rpy="0 0 0"/>
+    <mass value="0.032708"/>
+    <inertia ixx="6.723557444e-06" iyy="4.064567141e-05" izz="4.349180548e-05" ixy="2.401384918e-10" iyz="-1.226634188e-11" ixz="4.102371953e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.009500 0.044000 -0.024380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_foot.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.009500 0.044000 -0.024380" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_foot.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="head_joint" type="continuous">
+  <origin xyz="0.075102 0.018229 0.241619" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="head"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="tail_joint" type="continuous">
+  <origin xyz="-0.093508 0.019726 0.239673" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="tail"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="left_hip_joint" type="continuous">
+  <origin xyz="-0.009500 0.044000 0.205380" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="left_femur"/>
+  <axis xyz="-1.0 0.0 0.0"/>
+</joint>
+
+<joint name="left_femur_joint" type="continuous">
+  <origin xyz="0.000000 0.000000 -0.062000" rpy="0 0 0"/>
+  <parent link="left_femur"/>
+  <child link="left_tibia"/>
+  <axis xyz="0.0 -1.0 0.0"/>
+</joint>
+
+<joint name="left_tibia_joint" type="continuous">
+  <origin xyz="0.000000 0.000000 -0.065000" rpy="0 0 0"/>
+  <parent link="left_tibia"/>
+  <child link="left_ankle"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="left_ankle_joint" type="continuous">
+  <origin xyz="0.000000 0.000000 -0.054000" rpy="0 0 0"/>
+  <parent link="left_ankle"/>
+  <child link="left_foot"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="right_hip_joint" type="continuous">
+  <origin xyz="-0.009500 -0.044000 0.205380" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="right_femur"/>
+  <axis xyz="1.0 0.0 0.0"/>
+</joint>
+
+<joint name="right_femur_joint" type="continuous">
+  <origin xyz="0.000000 0.000000 -0.062000" rpy="0 0 0"/>
+  <parent link="right_femur"/>
+  <child link="right_tibia"/>
+  <axis xyz="0.0 -1.0 0.0"/>
+</joint>
+
+<joint name="right_tibia_joint" type="continuous">
+  <origin xyz="0.000000 0.000000 -0.065000" rpy="0 0 0"/>
+  <parent link="right_tibia"/>
+  <child link="right_ankle"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="right_ankle_joint" type="continuous">
+  <origin xyz="0.000000 0.000000 -0.054000" rpy="0 0 0"/>
+  <parent link="right_ankle"/>
+  <child link="right_foot"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+</robot>

@@ -1,0 +1,71 @@
+# Real-robot wiring and calibration, read only by pi_runner on the Pi.
+# The simulators never read this file, so editing it does not invalidate the
+# converted USD or any training run. Physical properties (masses, limits, servo
+# specs, baud rate) stay in robot_config.yaml.
+#
+# null means "not measured yet": pi_runner refuses to drive the servos until
+# every servo below has an id, dir and zero_tick, and `hw_check.py imu` prints what to fill in for
+# the IMU mounting.
+
+servo_bus:
+  # USB adapter: Hiwonder/LewanSoul BusLinker debug board (USB-serial + half-duplex
+  # buffer). "auto" picks the only /dev/serial/by-id/* device; set an explicit
+  # by-id path once more than one USB serial device is plugged in.
+  port: auto
+  # per reply. Measured 2026-10-18: a POS_READ round trip is 3.6 ms (3.54-3.76), the 8-byte
+  # reply arrives in one piece, no echo. A complete reply returns at once; the timeout only
+  # costs time when a servo does not answer.
+  read_timeout_s: 0.006
+  # Pipelined position reads: next request this long after the previous one. Measured
+  # 2026-10-18: < 1.8 ms loses replies; 2.0 ms reads all 8 in 15.7 ms (pi_runner/lx16a.py).
+  request_gap_s: 0.002
+
+# One entry per actuated joint (robot_config.yaml joints.actuated_joints).
+#   id:        servo bus id (0-253). Mapped 2026-10-18: servo_identify moved ids 1-8 in turn and
+#              Sachin saw L hip, L femur, L tibia, R hip, R femur, R tibia, head, tail.
+#              Servo faces (active side, not the idler): hips forward, femurs left,
+#              tibias right, head and tail left.
+#   dir:       +1 if a positive joint angle increases the servo's tick count, -1 otherwise.
+#              Measured 2026-10-18 by hand with torque off (`hw_check watch`, log
+#              ~/trex/logs/servo_hand_20261018.npy): head nose down +100 ticks, tail tip down
+#              -119 (tip down is a NEGATIVE tail angle: axis +y, tip behind the joint),
+#              L hip foot inward -30, R hip foot inward +55, femurs foot forward +99/+107,
+#              tibias foot back +98/+89. Femur and tibia servos come out opposite to a
+#              body-on-parent mounting, i.e. their horns drive the parent link.
+#   zero_tick: servo tick (0-1000, 0.24 deg/tick, 500 = mid-travel) at the CAD zero pose
+#              (legs straight down, feet flat, head and tail level). Measured 2026-10-18 by
+#              eye-posing with torque off, robot standing straight on the floor
+#              (~/trex/logs/servo_zero_20261018_b.npy, spread <= 2 ticks), after the tail
+#              and left femur horns were re-indexed (tail was at -49, past the servo's end). The joint limits in robot_config.yaml must map inside 0-1000 ticks;
+#              HardwareBackend refuses to drive otherwise.
+servos:
+  head_joint:        {id: 7, dir: 1, zero_tick: 448}
+  tail_joint:        {id: 8, dir: 1, zero_tick: 495}
+  left_hip_joint:    {id: 1, dir: -1, zero_tick: 330}
+  right_hip_joint:   {id: 4, dir: 1, zero_tick: 409}
+  left_femur_joint:  {id: 2, dir: 1, zero_tick: 200}
+  right_femur_joint: {id: 5, dir: 1, zero_tick: 408}
+  left_tibia_joint:  {id: 3, dir: 1, zero_tick: 386}
+  right_tibia_joint: {id: 6, dir: 1, zero_tick: 344}
+
+imu:
+  # /dev/i2c-3: bit-banged I2C (dtoverlay=i2c-gpio,bus=3) on GPIO2 SDA / GPIO3 SCL. The
+  # BNO055 stretches the clock and the Pi's hardware I2C block then corrupts bit 7 of
+  # bytes read (seen 2026-10-17: OPR_MODE 0x08 read as 0x88), so hardware i2c-1 is off.
+  bus: 3
+  address: 0x28 # found by i2cdetect on 2026-10-17 (0x29 if ADR is pulled high)
+  # IMUPLUS: accel + gyro fusion, relative heading, no magnetometer (indoor robot
+  # full of motors and a battery). NDOF adds the magnetometer for absolute heading.
+  mode: IMUPLUS
+  # Rotation from the chip's axes to the body frame (x forward, y left, z up):
+  # v_body = sensor_to_body @ v_chip.
+  # Measured 2026-10-18 (two tilt rounds, robot held, `logs/imu_tilt_20261018*.npy` on the
+  # Pi): Sachin tilted nose down first, then left side down, then turned left. Chip +y points
+  # forward (head), chip +x to the robot's right, chip +z up. Checks with this matrix: level
+  # g = (0, 0, -1); nose down 32 deg g_x = +0.53; left side down g_y = +0.55; turn left 90
+  # deg yaw +90 and gyro_z > 0; tilt-return gyro rates have the matching signs.
+  # (The first guess from the photos, x/y both flipped, was off by 90 deg.)
+  sensor_to_body:
+    - [0, 1, 0]
+    - [-1, 0, 0]
+    - [0, 0, 1]

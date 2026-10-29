@@ -1,0 +1,149 @@
+{
+ "base_link": {
+  "mass_kg": 0.8487,
+  "com_m": [
+   -0.0098,
+   3e-05,
+   0.24005
+  ],
+  "parts": {
+   "pelvis": 81.5,
+   "left_hip_servo": 52.0,
+   "right_hip_servo": 52.0,
+   "head_servo": 52.0,
+   "tail_servo": 52.0,
+   "head_tail_servo_brackets": 5.3,
+   "battery": 370.0,
+   "electronics_deck": 184.0
+  }
+ },
+ "head": {
+  "mass_kg": 0.078,
+  "com_m": [
+   0.09181,
+   -0.01939,
+   0.01288
+  ],
+  "parts": {
+   "head": 78.0
+  }
+ },
+ "tail": {
+  "mass_kg": 0.038,
+  "com_m": [
+   -0.08662,
+   -0.0199,
+   -0.00596
+  ],
+  "parts": {
+   "tail": 38.0
+  }
+ },
+ "left_femur": {
+  "mass_kg": 0.0788,
+  "com_m": [
+   -0.00252,
+   -0.00135,
+   -0.04121
+  ],
+  "parts": {
+   "hip_bracket": 24.1,
+   "hip_servo_horns": 2.7,
+   "femur_servo": 52.0
+  }
+ },
+ "left_tibia": {
+  "mass_kg": 0.0718,
+  "com_m": [
+   -0.00303,
+   -0.00016,
+   -0.04291
+  ],
+  "parts": {
+   "thigh_bracket": 12.8,
+   "tibia_servo": 52.0,
+   "femur_servo_horns": 2.7,
+   "upper_idler": 4.4
+  }
+ },
+ "left_ankle": {
+  "mass_kg": 0.0295,
+  "com_m": [
+   -0.01412,
+   0.00033,
+   -0.02029
+  ],
+  "parts": {
+   "shank_bracket": 16.2,
+   "tibia_servo_horns": 2.7,
+   "knee_coupler": 4.2,
+   "lower_idler": 6.4
+  }
+ },
+ "left_foot": {
+  "mass_kg": 0.0327,
+  "com_m": [
+   0.00979,
+   0.0,
+   -0.01666
+  ],
+  "parts": {
+   "foot": 24.3,
+   "sole_pad": 8.5
+  }
+ },
+ "right_femur": {
+  "mass_kg": 0.0788,
+  "com_m": [
+   -0.00252,
+   0.00135,
+   -0.04121
+  ],
+  "parts": {
+   "hip_bracket": 24.1,
+   "hip_servo_horns": 2.7,
+   "femur_servo": 52.0
+  }
+ },
+ "right_tibia": {
+  "mass_kg": 0.0718,
+  "com_m": [
+   -0.00303,
+   0.00016,
+   -0.04291
+  ],
+  "parts": {
+   "thigh_bracket": 12.8,
+   "tibia_servo": 52.0,
+   "femur_servo_horns": 2.7,
+   "upper_idler": 4.4
+  }
+ },
+ "right_ankle": {
+  "mass_kg": 0.0295,
+  "com_m": [
+   -0.01412,
+   -0.00033,
+   -0.02029
+  ],
+  "parts": {
+   "shank_bracket": 16.2,
+   "tibia_servo_horns": 2.7,
+   "knee_coupler": 4.2,
+   "lower_idler": 6.4
+  }
+ },
+ "right_foot": {
+  "mass_kg": 0.0327,
+  "com_m": [
+   0.00979,
+   -0.0,
+   -0.01666
+  ],
+  "parts": {
+   "foot": 24.3,
+   "sole_pad": 8.5
+  }
+ },
+ "total_kg": 1.3903
+}

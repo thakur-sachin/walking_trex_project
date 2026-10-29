@@ -1,0 +1,36 @@
+# v9d: v9c + slow-gait fix. v9c stands still at a 0.05 m/s command and makes 42% at 0.10 (0% in
+# MuJoCo): on the fitted (slow) servo, standing at a low command scored ~50% of track_vx (fixed
+# sigma 0.06) and 60% of gait_contact (each planted foot matches its stance phase), which beat the
+# cost of stepping. Three changes:
+#   - track_vx tolerance proportional to the command (30%, at least 0.015, at most 0.06 m/s)
+#   - gait_contact pays only when both feet match the clock
+#   - 35% of walking commands drawn from 0.03-0.12 m/s; range starts at 0.03
+# Run: python walk_rl/train.py --name v9d --iterations 1500 --task walk_rl/experiments/v9d_slow_gait.yaml
+actuator:
+  model: lx16a
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+domain_randomization:
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood (Sachin): PhysX averages robot and ground (0.5) friction, so
+  # 0.1-1.2 here = 0.30-0.85 effective (was 0.45-0.85; PLA on wood is probably ~0.3-0.4)
+  friction_range: [0.1, 1.2]

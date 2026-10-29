@@ -1,0 +1,62 @@
+# One-at-a-time design-lever sweeps for redesign/levers.py (static / quasi-static figures of merit).
+# Each sweep changes one variant key of redesign/variant_model.py around the CURRENT robot model
+# (assets/robots/trex: URDF + robot_config.yaml, torso 1.0 kg estimate). These are study ranges,
+# not physical parameters of a design; the chosen design's values go in its own robot_config.yaml.
+gait_hz: 2.2 # v9c gait clock at 0.2 m/s (1.8 Hz + 4.0 Hz/(m/s) above 0.1 m/s)
+sweeps:
+  torso_mass:
+    key: base_mass_kg
+    values: [0.6, 0.8, 1.2, 1.4]
+  torso_com_z:
+    key: base_com_shift_m
+    values: [[0, 0, -0.03], [0, 0, -0.015], [0, 0, 0.015], [0, 0, 0.03]]
+  torso_com_x:
+    key: base_com_shift_m
+    values: [[-0.02, 0, 0], [0.02, 0, 0]]
+  head_mass:
+    key: head_mass_scale
+    values: [0.25, 0.5, 1.5]
+  tail_mass:
+    key: tail_mass_scale
+    values: [0.25, 0.5, 1.5]
+  head_tail_mass:
+    values: [{head_mass_scale: 0.5, tail_mass_scale: 0.5}, {head_mass_scale: 0.0001, tail_mass_scale: 0.0001}]
+  head_tail_length:
+    values: [{head_length_scale: 0.7, tail_length_scale: 0.7}, {head_length_scale: 1.3, tail_length_scale: 1.3}]
+  hip_spacing:
+    key: hip_spacing_delta_m
+    values: [-0.04, -0.03, -0.02, -0.01, 0.01]
+  thigh_length:
+    key: thigh_length_m
+    values: [0.050, 0.075, 0.085]
+  shank_length:
+    key: shank_length_m
+    values: [0.044, 0.064, 0.074]
+  leg_mass:
+    key: leg_mass_scale
+    values: [0.7, 1.3]
+  foot_length:
+    key: foot_scale
+    values: [[0.8, 1.0], [1.2, 1.0]]
+  foot_width:
+    key: foot_scale
+    values: [[1.0, 0.7], [1.0, 1.2]]
+  stall_torque:
+    key: stall_scale
+    values: [0.75, 1.05]
+  hip_spacing_narrow_feet: # narrower stance with feet narrowed so the soles keep a gap
+    values:
+      - {hip_spacing_delta_m: -0.03, foot_scale: [1.0, 0.85]}
+      - {hip_spacing_delta_m: -0.035, foot_scale: [1.0, 0.75]}
+  concept: # candidate combinations for docs/REDESIGN_CONCEPT.md (torso mass kept at the 1.0 kg model value unless stated)
+    values:
+      - {hip_axis_y_m: 0.0737} # symmetric at today's mean half-spacing: isolates the asymmetry fix
+      - {hip_axis_y_m: 0.044, foot_scale: [1.0, 0.8]}
+      - {hip_axis_y_m: 0.040, foot_scale: [1.0, 0.75]}
+      - {hip_axis_y_m: 0.044, foot_scale: [1.0, 0.8], head_mass_scale: 0.5, tail_mass_scale: 0.5}
+      - {hip_axis_y_m: 0.044, foot_scale: [1.0, 0.8], head_mass_scale: 0.5, tail_mass_scale: 0.5, base_mass_kg: 0.8}
+  asbuilt_mass: # mass budget from the real parts (redesign/asbuilt_mass.py, 30 % infill, mid electronics/battery); ESTIMATE
+    values:
+      - {base_mass_kg: 0.77, link_mass_scale: {head: 0.53, tail: 0.57, left_femur: 1.16, right_femur: 1.16, left_tibia: 1.36, right_tibia: 1.36, left_ankle: 1.29, right_ankle: 1.29, left_foot: 0.61, right_foot: 0.61}}
+      - {base_mass_kg: 0.67, link_mass_scale: {head: 0.53, tail: 0.57, left_femur: 1.16, right_femur: 1.16, left_tibia: 1.36, right_tibia: 1.36, left_ankle: 1.29, right_ankle: 1.29, left_foot: 0.61, right_foot: 0.61}}
+      - {base_mass_kg: 0.67, hip_axis_y_m: 0.044, foot_scale: [1.0, 0.8], link_mass_scale: {head: 0.53, tail: 0.57, left_femur: 1.16, right_femur: 1.16, left_tibia: 1.36, right_tibia: 1.36, left_ankle: 1.29, right_ankle: 1.29, left_foot: 0.61, right_foot: 0.61}}

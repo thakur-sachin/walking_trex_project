@@ -1,0 +1,24 @@
+# Inputs for redesign/asbuilt_mass.py: mass budget of the AS-BUILT robot from the Fusion parts.
+# Geometry (volume, surface area) comes from the CAD; everything below is a material or component
+# value with its source. Nothing here was weighed.
+pla_density_g_cm3: 1.24 # PLA, typical (ASSUMPTION: every printed part is PLA)
+steel_density_g_cm3: 7.85 # screws seated in parts
+print_model:
+  # printed mass = density x (shell + infill x core); shell = min(V, surface area x wall), core = V - shell
+  wall_mm: 1.2 # ASSUMPTION: 3 perimeters x 0.4 mm (also used for top/bottom skins)
+  infill_cases: [0.15, 0.30, 1.0] # infill unknown: low / typical / solid
+servo:
+  mass_g: 52.0 # LX-16A datasheet (brief); the CAD adapters (horns) are counted as printed PLA parts
+  count_per_link: { base_link: 4, left_femur: 1, right_femur: 1, left_tibia: 1, right_tibia: 1 }
+electronics_g: # [low, high]; none of these is placed on the robot in the Main v24 assembly
+  raspberry_pi_4: [46, 46] # datasheet
+  acrylic_plates: [13, 26] # CAD plate 10.9 cm3 x 1.19 g/cm3 = 13 g; the photos show two plates
+  standoffs_screws: [10, 20] # ESTIMATE
+  dcdc_converter: [12, 50] # CAD model is an LM2596 module (~12 g); the photos show a larger red board with a toroid
+  bus_adapter_and_case: [15, 25] # BusLinker (CAD 4.1 cm3) + printed controller_case (7.1 cm3); ESTIMATE
+  bno055_breakout: [3, 3]
+  wifi_dongle_antenna: [15, 30] # in the photos, not in the CAD; ESTIMATE
+  wiring: [20, 40] # ESTIMATE
+  velcro: [3, 6] # CAD 5.9 cm3
+battery_g: [150, 220] # CAD "TalentCell Battery v1", envelope 109.5 x 63 x 24 mm. Closest listing found:
+  # TalentCell 12 V 3000 mAh, ~105 x 64 x 24 mm, 180 g (retailer listing, unreliable). ESTIMATE until weighed.

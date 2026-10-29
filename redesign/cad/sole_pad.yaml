@@ -1,0 +1,9 @@
+# NOT USED (Sachin 2026-10-20: no TPU printing). Kept for reference; a PLA pad gives no friction gain.
+# TPU sole pad for the CURRENT feet (assets/robots/trex/meshes/*_foot.stl): the sole outline, inset,
+# extruded. Glue under the PLA foot. Optional, for the friction finding in docs/REDESIGN_LOG.md.
+# If fitted, the sole moves down by thickness_mm: the simulation model must add it (ankle-to-sole
+# distance and foot collision geometry), and the floor friction range must be re-measured.
+thickness_mm: 2.0 # ASSUMED; thinner = stiffer, less sink; TPU 95A suggested
+inset_mm: 0.5 # keep the pad edge inside the PLA outline
+min_feature_mm: 3.0 # drop slivers narrower than this (toe tips)
+section_above_sole_mm: 0.5 # where the outline is taken (the PLA sole is flat to ~0.3 mm)

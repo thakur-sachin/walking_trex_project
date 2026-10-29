@@ -1,0 +1,17 @@
+# v8e: everything learned in v8, trained longer on a bigger batch.
+#   - v8d's speed-scaled gait clock (only change that reduced sway at speed)
+#   - pushes kept (v8b ablation: +7-13 pts push survival for a small speed cost), ramped
+#     over a longer window and to 0.35 m/s, since 0.4 m/s kicks still failed 21-35%
+#   - base mass DR stays x0.8-1.3 (x0.7-1.5 could not learn to stand)
+#   - 16384 envs (6.1 GB, ~2x samples/s of 4096 on the RTX 4060); 8 minibatches keeps
+#     minibatches near the v8 size (~49k vs 24.5k samples)
+# Run: python walk_rl/train.py --name v8e --iterations 3000 --task walk_rl/experiments/v8e_long_16k.yaml
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1500
+  max_lin_vel_mps: 0.35
+ppo:
+  num_envs: 16384
+  minibatches: 8

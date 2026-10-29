@@ -1,0 +1,154 @@
+# Trex v2 robot configuration. Written by redesign/make_trex_v2.py from redesign/trex_v2_design.yaml
+# (geometry, ranges, masses) and assets/robots/trex/robot_config.yaml (servo model, fitted actuator,
+# sim gains, sensors). Edit the design file and regenerate; do not edit by hand. Masses are estimates.
+mass:
+  base_link_kg: 0.8487
+  base_link_inertia: urdf
+  link_kg: {}
+joints:
+  default_limit_deg: 45.0
+  overrides_deg:
+    left_hip_joint: 20.0
+    right_hip_joint: 20.0
+    left_tibia_joint: 90.0
+    right_tibia_joint: 90.0
+  range_deg:
+    left_hip_joint:
+    - -16.0
+    - 20.0
+    right_hip_joint:
+    - -16.0
+    - 20.0
+    left_tibia_joint:
+    - -45.0
+    - 90.0
+    right_tibia_joint:
+    - -45.0
+    - 90.0
+  actuated_joints:
+  - head_joint
+  - tail_joint
+  - left_hip_joint
+  - right_hip_joint
+  - left_femur_joint
+  - right_femur_joint
+  - left_tibia_joint
+  - right_tibia_joint
+  passive_joints:
+  - left_ankle_joint
+  - right_ankle_joint
+  passive_joint_drive:
+    stiffness: 40.0
+    damping: 5.0
+ankle_linkage:
+  upper_parallelogram:
+    between_joints:
+    - tibia_joint
+    - ankle_joint
+    x_mm: 50.0
+    z_mm: 65.0
+  lower_parallelogram:
+    between_joints:
+    - femur_joint
+    - tibia_joint
+    x_mm: 50.0
+    z_mm: 54.0
+  coupled_limit_deg:
+  - -52.0
+  - 33.0
+  relationship: ankle_joint_angle = femur_joint_angle - tibia_joint_angle
+  sim_model: teleport_routed
+actuator:
+  model: LX-16A
+  voltage_v: 7.4
+  stall_torque_kgcm: 17.0
+  stall_torque_nm: 1.6671
+  no_load_speed_deg_per_sec: 375.0
+  no_load_speed_rad_per_sec: 6.545
+  position_accuracy_deg: 0.24
+  feedback:
+  - position
+  - temperature
+  - voltage
+  control: serial_bus
+  baud_rate: 115200
+  weight_g: 52
+actuator_model:
+  kp_duty_per_rad: 12.2
+  deadband_deg: 0.41
+  latency_s: 0.004
+  armature_kgm2: 0.021
+  coulomb_friction_nm: 0.31
+  no_load_speed_scale: 0.46
+  reference_voltage_v: 7.4
+  measured_voltage_v: 7.11
+sim_drive:
+  legs:
+    joint_pattern: .*(hip|femur|tibia).*
+    stiffness: 40.0
+    damping: 5.0
+  auxiliary:
+    joint_pattern: head_joint|tail_joint
+    stiffness: 10.0
+    damping: 1.0
+materials:
+  skin:
+    color_rgb:
+    - 0.21
+    - 0.32
+    - 0.14
+    roughness: 0.6
+    links:
+    - base_link
+    - head
+    - tail
+    - left_femur
+    - right_femur
+    - left_tibia
+    - right_tibia
+  claws:
+    color_rgb:
+    - 0.1
+    - 0.08
+    - 0.07
+    roughness: 0.4
+    links:
+    - left_ankle
+    - right_ankle
+    - left_foot
+    - right_foot
+sensors:
+  imu:
+    model: BNO055
+    location: base_link
+  servo_position_feedback: true
+  feet_contact: false
+  camera: null
+compute:
+  onboard: Raspberry Pi 4 (8GB)
+sim_self_collision:
+  pairs:
+  - - left_foot
+    - right_foot
+  - - left_foot
+    - right_ankle
+  - - right_foot
+    - left_ankle
+  - - left_ankle
+    - right_ankle
+  - - left_tibia
+    - right_tibia
+  - - left_foot
+    - right_tibia
+  - - right_foot
+    - left_tibia
+power:
+  battery: TalentCell YB1206000, 11.1 V nominal (12.6-9 V), 6000 mAh
+  battery_kg: 0.37
+  battery_max_current_a: 3.0
+  servo_bus_v: 7.11
+  note: 'servo bus fed by a DC-DC buck-boost: 3 A at ~11 V caps the bus near 4.5 A at 7.1 V before losses'
+source:
+  script: redesign/make_trex_v2.py
+  design: redesign/trex_v2_design.yaml
+  masses: ESTIMATES (printed parts at the design's infill, datasheet servos, estimated electronics)

@@ -1,0 +1,37 @@
+# v9f: v9e with the tibia action range shifted instead of widened. v9e's 90 deg scale doubled the
+# tibia's exploration noise and halved its resolution, and walked worse than v9d. Here the scale is
+# 67.5 deg about a +22.5 deg centre: the same -45..+90 deg reach at 1.5x v9d's tibia step.
+# Same robot model as v9e (robot_config 2026-10-19). Episodes still start from the neutral-pose goal.
+# Run: python walk_rl/train.py --name v9f --iterations 1500 --task walk_rl/experiments/v9f_knee_shift.yaml
+actuator:
+  model: lx16a
+actions:
+  joint_scale_deg:
+    left_tibia_joint: 67.5
+    right_tibia_joint: 67.5
+  joint_center_deg:
+    left_tibia_joint: 22.5
+    right_tibia_joint: 22.5
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+ppo:
+  max_action_std: 0.5
+domain_randomization:
+  base_inertia_scale_range: [0.6, 1.6]
+  friction_range: [0.1, 1.2]

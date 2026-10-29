@@ -1,0 +1,44 @@
+# Bottom-up mass estimate of the CURRENT robot, for the redesign audit (redesign/audit.py).
+# EVERY number here is an ESTIMATE or ASSUMPTION unless marked otherwise. None was weighed.
+# Replace them with Sachin's scale readings when they arrive (see docs/REDESIGN_CONCEPT.md, data request).
+#
+# Why this exists: the URDF masses are Fusion's solid volumes at 1.06 g/cm3 (verified: every link's
+# mesh volume x 1.06 reproduces its URDF mass, centre of mass and inertia to <0.1 %; base_link was
+# authored as steel, 7.85 g/cm3). A printed part is PLA (1.24 g/cm3) with perimeters + infill, and a
+# servo modelled as a solid block at 1.06 g/cm3 weighs less than the real 52 g servo. So the URDF
+# leg/head/tail masses are not measurements either.
+
+servo:
+  mass_kg: 0.052 # LX-16A datasheet (brief section 3); horn + screws not included
+  horn_screws_kg: 0.004 # ASSUMED
+  cad_block_m: [0.0452, 0.0247, 0.0365] # ASSUMED: the CAD servo is a solid block of the datasheet size
+pla_density_kg_m3: 1240.0 # PLA, typical
+# Effective fill of a printed part = printed mass / (solid volume x density). Depends on walls,
+# infill % and part thickness. ASSUMED range for thin brackets (mostly walls) and bulky shells.
+fill_fraction:
+  thin: [0.6, 1.0] # brackets, links, feet
+  bulky: [0.25, 0.6] # head, tail
+servos_per_link: # from the meshes and the photos/video (servo bodies visible in these links)
+  base_link: 4 # 2 hip + head + tail
+  left_femur: 1
+  right_femur: 1
+  left_tibia: 1
+  right_tibia: 1
+part_class: { left_femur: thin, right_femur: thin, left_tibia: thin, right_tibia: thin, left_ankle: thin,
+              right_ankle: thin, left_foot: thin, right_foot: thin, head: bulky, tail: bulky }
+# Torso (base_link) contents, kg, [low, high]. From the photos/video (2026-10 media): flat plate,
+# hip servos under it, head/tail servos on its ends, Pi 4 + two acrylic plates + standoffs stacked
+# on top with the BNO055 and a large DC-DC converter, a USB Wi-Fi dongle with antenna, the servo
+# bus adapter, a 2S pack glued under the plate. The arched shell is not fitted in the video.
+torso_items:
+  servos_4: [0.208, 0.224] # 4 x 52 g (+ horns)
+  raspberry_pi_4: [0.046, 0.048] # board only
+  acrylic_plates_standoffs_screws: [0.030, 0.060]
+  dcdc_converter: [0.025, 0.050] # large red buck/boost board with toroid, caps, terminals
+  bno055_breakout: [0.003, 0.005]
+  wifi_dongle_antenna: [0.015, 0.030]
+  servo_bus_adapter: [0.008, 0.015]
+  battery_2s: [0.070, 0.140] # unknown pack: 2S LiPo 1000-2200 mAh or 2x18650 with holder
+  wiring: [0.020, 0.040]
+  printed_plate_and_servo_mounts: [0.060, 0.120] # plate ~69 cm3 solid (mesh section) + mounts, PLA
+  arched_shell: [0.0, 0.150] # "negligible" per Sachin; 0.15 if printed solid (121 cm3 above z=245 mm)

@@ -1,0 +1,33 @@
+# v9h: v9g (v9d's recipe on the 2026-10-20 measured model) + reward.progress_gate. v9e/v9f/v9g drifted
+# to standing still after the pushes started (iteration ~500): standing kept the heading, yaw, roll,
+# smoothness and contact rewards. Gated, those pay in proportion to v_x / cmd while walking.
+# Run: python walk_rl/train.py --name v9h --iterations 1500 --task walk_rl/experiments/v9h_progress_gate.yaml
+actuator:
+  model: lx16a
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  progress_gate: [track_heading, track_yaw, roll_band, base_rock, base_acc, gait_contact]
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+domain_randomization:
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood (Sachin): PhysX averages robot and ground (0.5) friction, so
+  # 0.1-1.2 here = 0.30-0.85 effective (was 0.45-0.85; PLA on wood is probably ~0.3-0.4)
+  friction_range: [0.1, 1.2]

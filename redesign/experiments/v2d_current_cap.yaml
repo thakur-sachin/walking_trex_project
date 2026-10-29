@@ -1,0 +1,38 @@
+# Trex v2 (assets/robots/trex_v2, built by redesign/make_trex_v2.py): narrow stance (hips +-44 mm), hip range
+# -16..+20 deg (action scale 20), tibia -45..+90 deg (scale 90), coupled ankle limit -52..+33 deg, TPU-padded
+# 68 mm feet, battery on the plate, estimated masses (1.44 kg). Recipe = v9e (forward-knee study on the current
+# robot), so v2a vs v9e isolates the body.
+# v2d = v2a + a penalty on the estimated servo-bus current above the supply ceiling (~4 A at 7.1 V).
+# Run: python walk_rl/train.py --name v2d --iterations 1500 --task redesign/experiments/v2d_current_cap.yaml
+robot:
+  asset_dir: assets/robots/trex_v2
+  self_collision: true # pairs from robot_config sim_self_collision
+actuator:
+  model: lx16a
+actions:
+  joint_scale_deg: {} # trex_v2's robot_config already sets hips 20, tibias 90
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+    servo_current: -1.0 # NEW TERM: relu(I_bus - 4.0 A) with I_bus = sum_i (0.1 + 2.4 * |tau_i| / stall) (redesign/current_budget.py model)
+ppo:
+  max_action_std: 0.5
+domain_randomization:
+  base_inertia_scale_range: [0.6, 1.6]
+  base_mass_scale_range: [0.75, 1.3] # base 0.838 kg estimate (battery 370 g known; printed parts estimated)
+  friction_range: [0.1, 1.2]

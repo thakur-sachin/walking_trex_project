@@ -1,0 +1,39 @@
+# Trex v2 (assets/robots/trex_v2, built by redesign/make_trex_v2.py from the 2026-10-20 measurements):
+# narrow stance (hips +-44 mm), hip range -16..+20 deg (scale 20), coupled ankle limit -52..+33 deg, 68 mm PLA
+# feet, measured battery/head/tail, 1.39 kg. Recipe = v9i's (v9d + reward.progress_gate in tracking mode, on the current measured
+# robot), so v2a vs v9i isolates the body.
+# Run: python walk_rl/train.py --name v2a --iterations 1500 --task redesign/experiments/v2a_base.yaml
+robot:
+  asset_dir: assets/robots/trex_v2
+  self_collision: true # pairs from robot_config sim_self_collision
+actuator:
+  model: lx16a
+actions:
+  joint_scale_deg: # v9d recipe: tibia action reach +/-45 deg (v9e/v9f with the forward-knee scale stood still)
+    left_tibia_joint: 45.0
+    right_tibia_joint: 45.0
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  progress_gate_mode: tracking
+  progress_gate: [track_heading, track_yaw, roll_band, base_rock, base_acc, gait_contact]
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+ppo:
+  max_action_std: 0.5
+domain_randomization:
+  base_inertia_scale_range: [0.6, 1.6]
+  friction_range: [0.1, 1.2]

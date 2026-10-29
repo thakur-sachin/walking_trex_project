@@ -1,0 +1,33 @@
+# v9g: control run. v9d's recipe unchanged (tibia scale 45 deg, centre 0) on the 2026-10-20 measured
+# robot model (1.307 kg, parts inertia, battery under the plate) with the as-built limits (hips
+# -30..+7 deg, coupled ankle -55..+37 deg). v9e and v9f (forward-knee range) learned to stand still
+# on the 2026-10-19 model; v9g separates the knee-range change from the model/limit changes.
+# Run: python walk_rl/train.py --name v9g --iterations 1500 --task walk_rl/experiments/v9g_control.yaml
+actuator:
+  model: lx16a
+command:
+  vx_range_mps: [0.03, 0.25]
+  slow_prob: 0.35
+  slow_range_mps: [0.03, 0.12]
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+reward:
+  track_vx_sigma_rel: 0.3
+  track_vx_sigma_min: 0.015
+  gait_contact_mode: both
+  weights:
+    lateral_drift: -10.0
+    roll_band: 1.0
+    foot_flat: -20.0
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+domain_randomization:
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood (Sachin): PhysX averages robot and ground (0.5) friction, so
+  # 0.1-1.2 here = 0.30-0.85 effective (was 0.45-0.85; PLA on wood is probably ~0.3-0.4)
+  friction_range: [0.1, 1.2]

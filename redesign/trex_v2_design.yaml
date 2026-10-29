@@ -1,0 +1,113 @@
+# Trex v2 design parameters: the single source for the parametric CAD (redesign/cad/v2_parts.py) and
+# the simulation asset generator (redesign/make_trex_v2.py -> assets/robots/trex_v2/).
+#
+# Frame: the v2 assembly frame = the trex URDF assembly frame shifted +2.85 mm in y so that the
+# chassis centre line is y = 0 (the as-built hips are symmetric about the chassis; the trex URDF base
+# origin sits 2.85 mm off it). x forward, y left, z up, mm unless stated.
+#
+# Labels: [CAD] measured on the as-built Fusion model (Main v24), [CONCEPT] a design choice from
+# docs/REDESIGN_CONCEPT.md, [ASSUMED] a guess to be replaced, [EST] an estimate with its basis.
+
+frame:
+  y_shift_from_trex_mm: 2.85 # [CAD] chassis centre line in the trex URDF frame is y = -2.85
+
+printer:
+  bed_mm: [220, 220, 250] # [ASSUMED] printer unknown (Sachin parked); generic 220 x 220 x 250 bed
+
+servo: # LX-16A, [CAD] Main v24 servo model
+  body_mm: [45.0, 25.0, 36.2] # long side, short side, shaft direction (incl. horn boss)
+  shaft_from_end_mm: 10.0 # [CAD] output axis 10 mm from one short end
+  horn_pcd_mm: 14.0 # [CAD] horn screw holes at +-7 mm and 7 mm below the axis (as-built hip bracket)
+  horn_hole_d_mm: 2.0 # [CAD]
+  mass_g: 52.0 # datasheet
+
+hip:
+  axis_y_mm: 44.0 # [CONCEPT] +-44 (as-built +-73.7)
+  axis_z_mm: 205.38 # [CAD] as-built hip axis height in the trex frame (kept: the plate stays where it is)
+  axis_x_mid_mm: -9.35 # [CAD] mid-point between the two hip horns (servo mirrored about it)
+  range_deg: [-16.0, 20.0] # [CONCEPT, leg 3] outward contact at -18 deg (bracket vs servo/pelvis, check), inward free to 45 (feet touch first)
+  # hip bracket: the cross-plate under the hip servo must clear the servo body over the roll range:
+  bracket_drop_mm: 24.0 # [CONCEPT] axis to the cross-plate's upper face (as-built 15): +-20 deg clear by 2.5 mm
+  plate_mm: 3.0 # [ASSUMED] cross-plate thickness
+  arm_mm: 4.0 # [CAD] fork arm thickness (as-built ~4)
+  arm_half_width_mm: 22.0 # [CAD] the cross-plate / arm half-width about the leg plane (as-built 21.6)
+  horn_faces_x_mm: [-28.2, 9.9] # [CAD] the mirrored hip servo's horn faces (back, front)
+
+leg: # [CAD] the 4-bar is unchanged: 50 mm idler offset, 65 / 54 mm spans
+  hip_to_femur_mm: 62.0 # [CONCEPT] as-built 55: +7 mm so the femur servo hangs below the deeper cross-plate
+  thigh_mm: 65.0
+  shank_mm: 54.0
+  idler_offset_mm: 50.0
+  axis_x_mm: -9.5 # [CAD] femur/tibia/ankle axes x (both legs; the trex URDF had them 2 mm apart)
+  ankle_to_sole_mm: 24.1 # [CAD] kept: sole thinner by the separate pad
+  femur_servo_above_axis_mm: 35.0 # [CAD] femur servo top above the femur axis (bottom 10 mm below)
+  side_plate_end_above_axis_mm: 14.0 # [CAD] femur cradle side plates stop above the horn (as-built ~7, horn r 10)
+  idler_lug_y_mm: [-21.8, -14.9] # [CAD] upper idler lug on the hip bracket, relative to the leg plane
+  idler_hole_d_mm: 6.0 # [CAD]
+
+foot:
+  length_mm: [-37.0, 79.0] # [CAD] sole x extent about the ankle axis (kept)
+  width_mm: 68.0 # [CONCEPT] as-built 85
+  sole_pla_mm: 7.0 # [ASSUMED]
+  pad_mm: 2.0 # [ASSUMED] separate PLA pad (Sachin 2026-10-20: no TPU printing); replaceable wear layer
+  pad_inset_mm: 0.5
+  edge_chamfer_mm: 1.5 # [ASSUMED]
+  beam: # [CAD] the heel beam with the ankle and idler pivots (as-built x -61..+7.5 about the ankle, 6.7 thick)
+    x_mm: [-62.5, 7.5]
+    thickness_mm: 6.7
+    top_above_axis_mm: 8.5
+    hole_d_mm: 10.0 # [CAD] r 5 (bearing or bushing seat; to confirm)
+  toes: # [CONCEPT] three toes, narrower splay
+    mid_tip_x_mm: 79.0
+    side_tip: [62.0, 28.0] # x, |y| of the side toe tips (half-width 34 incl. the toe radius)
+    toe_width_mm: 12.0
+    heel_radius_mm: 15.0
+    mid_half_width_mm: 16.0
+
+pelvis:
+  plate_x_mm: [-91.8, 70.3] # [CAD] as-built plate outline
+  plate_half_y_mm: 65.0 # [CAD]
+  plate_z_mm: [221.5, 225.5] # [CAD] 4 mm plate
+  corner_r_mm: 12.0 # [ASSUMED]
+  hip_mount_wall_mm: 3.0 # [ASSUMED]
+  pi_holes_mm: [58.0, 49.0] # Raspberry Pi 4 mounting pattern (datasheet), for the deck standoffs
+  battery_strap_slot_mm: [4.0, 20.0] # [ASSUMED] slots for a strap / velcro
+
+battery: # TalentCell YB1206000 (Sachin): 11.1 V, 6000 mAh, ~370 g, 3 A max
+  mass_g: 370.0 # [maker's page via Sachin]
+  box_mm: [101.6, 63.5, 25.4] # [MEASURED] Sachin 2026-10-20: 4 x 2.5 x 1 in (on the robot: centred under the plate, long side fore-aft)
+  placement: on_plate # [CONCEPT, leg 3] kept from the 130 x 76 mm assumption; the measured 64 mm width may fit under the plate again (to check)
+  centre_xy_mm: [-10.0, 0.0] # [ASSUMED] over the hips, on the centre line
+  max_current_a: 3.0 # [maker] 3 A at ~11 V -> ~4.5 A at 7.1 V servo side before converter losses
+
+electronics: # deck on standoffs above the battery
+  deck_box_mm: [90.0, 60.0, 30.0] # [ASSUMED] Pi 4 + DC-DC + bus adapter envelope
+  deck_gap_mm: 5.0 # [ASSUMED] above the battery
+  mass_g: # [EST]
+    pi4: 46
+    dcdc: 50 # buck-boost with a large inductor (media/electronics_side.jpg)
+    bus_adapter_and_case: 15
+    wifi_dongle: 10
+    imu: 3
+    standoffs_plates: 25
+    wiring: 30
+    velcro: 5
+
+head_tail: # unchanged parts (the smaller head/tail as built); MEASURED 2026-10-20 without their servos
+  head_kg: 0.078 # 130 g with its servo - 52 g
+  tail_kg: 0.038 # 90 g with its servo - 52 g
+
+print_mass: # printed-part mass model (as redesign/asbuilt_mass.yaml)
+  pla_g_cm3: 1.24
+  wall_mm: 1.2 # [ASSUMED] 3 perimeters
+  infill: 0.15 # [CALIBRATED 2026-10-20] the 15 % case of redesign/asbuilt_mass.py is closest to the weighed
+  # current robot (head 89 vs 78 g, tail 50 vs 38 g, leg 212 vs 193 g); 30 % overestimates every part
+
+joints_deg: # policy action scale (symmetric) and physical ranges for the v2 robot_config
+  scale: {head_joint: 45, tail_joint: 45, hip: 20, femur: 45, tibia: 90}
+  range: {head_joint: [-45, 45], tail_joint: [-45, 45], hip: [-16, 20], femur: [-45, 45], tibia: [-45, 90]}
+  ankle_coupled: [-52.0, 33.0] # v2 foot vs the as-built shank / lower idler: contact at +35 / -54 (check_trex_v2.py), 2 deg margin
+
+self_collision: # pairs the narrow stance makes risky (MuJoCo contype/conaffinity bits)
+  pairs: [[left_foot, right_foot], [left_foot, right_ankle], [right_foot, left_ankle], [left_ankle, right_ankle],
+          [left_tibia, right_tibia], [left_foot, right_tibia], [right_foot, left_tibia]]
