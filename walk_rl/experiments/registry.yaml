@@ -1,0 +1,342 @@
+# Ablation registry: one entry per training run, in the order they were trained.
+# walk_rl/ablation_study.py joins this with the measured results in outputs/walk_runs/<id>/ and writes
+# docs/ABLATION_STUDY.md. Add an entry BEFORE training a new run (id, parent, change, why, target), and
+# fill result / verdict / lesson after it is judged.
+#
+# Rules of the study:
+# - one change per run against a named parent; the change is the only thing that explains the result;
+# - every run states its objective as measurable targets before training;
+# - runs are judged only on the fixed evaluation (walk_rl/evaluate.py, pi_runner/sim2sim.py,
+#   walk_rl/gait_scorecard.py) and the video, never on training reward;
+# - results are only comparable within one robot model (`model` below). A run's config file is at
+#   `git show <config>`; old configs were removed from the tree because they train on today's robot model,
+#   not the one they ran on.
+#
+# models: `from` is when the change took effect (its commit, or the first result on it if earlier); an evaluation file older than that ran on the previous model.
+# measured_on: overrides the file-time label of a result where the time is known to mislead.
+# verdict: base (later runs build on it) | deployed (ran on the robot) | rejected | superseded | candidate | aborted
+
+models:
+  M0: {from: "2026-10-09T00:00", name: "URDF model, ideal servo", note: "torso inertia from the URDF (a steel shell), PD position drive at datasheet speed, CAD masses (1.78 kg)"}
+  M1: {from: "2026-10-15T20:55", name: "corrected torso and ankle", note: "composite torso inertia (~5x below the URDF), ankle torque routed through the linkage"}
+  M2: {from: "2026-10-18T17:19", name: "+ LX-16A servo model (unloaded fit)", note: "explicit torque model fitted to single-servo moves in the air; ~4x slower than M0's servo"}
+  M3: {from: "2026-10-19T15:22", name: "+ as-built joint ranges, mass estimates", note: "hips -30..+7 deg, tibia -45..+90 deg, coupled ankle limit; 1.50 kg"}
+  M4: {from: "2026-10-19T21:54", name: "+ measured masses", note: "whole robot 1.307 kg weighed; torso inertia from its parts"}
+  M5: {from: "2026-10-20T22:44", name: "+ servo model refit to real walks", note: "kp, friction, speed and stall refit by replaying the real v9m walks in MuJoCo"}
+  M6: {from: "2026-10-21T22:50", name: "+ measured centre of mass", note: "battery and electronics moved 25 mm back so the whole-robot CoM sits 30 mm ahead of the heel edge (measured balance point; was 40.8 mm)"}
+  M7: {from: "2026-10-23T21:40", name: "+ joint limits v2", note: "joint stops measured by hand: head -45..+35, tail +-45, hips -45..+7, femurs +-50, tibias -35..+75 deg (v1: +-45, hips -30..+7, tibias -45..+90)"}
+
+runs:
+  - id: v1
+    model: M0
+    change: first walking task; adaptive learning rate
+    why: baseline of the new task
+    result: circled 100-116 deg per 20 s and chattered while standing; later found to lean on its tail
+    verdict: rejected
+    lesson: an adaptive (rsl_rl-style) LR pins at its floor when the action std is small
+  - id: v2
+    parent: v1
+    model: M0
+    change: + yaw tracking, action_accel -0.5
+    why: stop the circling and the chatter
+    result: never learned; the penalty charged ~-3 per step for exploration noise
+    verdict: rejected
+    lesson: smoothness penalties on sampled actions punish exploration; use a command low-pass instead
+  - id: v3
+    parent: v2
+    model: M0
+    change: command low-pass, action_accel -0.05, LR 1e-3
+    why: structural smoothing instead of a heavy penalty
+    result: best curve to iteration ~750, then collapsed in one update (KL 0.24 at std 0.13); best weights lost
+    verdict: rejected
+    lesson: keep a per-minibatch KL guard, best.pt and periodic checkpoints
+  - id: v4
+    parent: v3
+    model: M0
+    change: KL guard, best checkpoints, from scratch
+    why: v3's recipe without the collapse
+    result: 100 % survival and ~97 % tracking, but it walked on a tripod (tail on the ground); 0 % survival once that is a fall
+    verdict: rejected
+    lesson: make every implied rule an explicit termination; look at the frames before believing a metric
+  - id: v6
+    parent: v4
+    model: M0
+    change: any non-foot ground contact ends the episode; contact from forces
+    why: only the feet may touch the ground
+    result: stood still (foot air time 0.000 at iteration 200)
+    verdict: rejected
+    lesson: lifting a foot unaided is an exploration barrier
+  - id: v7
+    parent: v6
+    model: M0
+    change: training-only harness (70 % body weight + righting torque, gone by iteration 450); stale-contact fix
+    why: get past the exploration barrier
+    result: first valid biped; 99 % survival at 0.10, 97 % tracking; heading drift up to 34 deg per 20 s
+    verdict: base
+    lesson: a curriculum that is removed during training can open a gait that RL does not find alone
+  - id: v8c
+    parent: v7
+    model: M0
+    change: heading observation, 3-frame history, delays, encoder offsets, pushes, new rewards
+    why: robustness to the real sensors and drift
+    result: heading change 0.7-2.4 deg per 20 s (v7 10-34); hard-sensor survival 88-97 % (v7 35-58 %)
+    verdict: superseded
+  - id: v8b
+    parent: v8c
+    model: M0
+    change: v8c without pushes
+    why: which part of v8 did the work
+    result: best speed and hard-sensor survival; push survival 0.88 vs 0.95
+    verdict: rejected
+    lesson: observations, rewards and sensor delays did the heavy lifting; pushes buy push recovery only
+    config: 1017f24:walk_rl/experiments/v8b_no_robustness.yaml
+  - id: v8d
+    parent: v8c
+    model: M0
+    change: gait clock frequency scales with speed
+    why: less sway at speed, less standing jitter
+    result: standing jitter halved; speed still capped at ~0.15-0.17 m/s (tibias on their 45 deg limit)
+    verdict: base
+    lesson: when every reward variant hits the same ceiling, check joint limits first
+    config: 1017f24:walk_rl/experiments/v8d_gait_freq.yaml
+  - id: v8e
+    parent: v8d
+    model: M0
+    measured_on: {isaac: M0}  # evaluated on its own branch, before M1 reached it
+    change: 16384 envs, 3000 iterations, pushes to 0.35 m/s
+    why: scale
+    result: survival 0.98-1.00, but action std ran away to 3.9
+    verdict: superseded
+    lesson: cap the action std (ppo.max_action_std 0.5)
+    config: ca6f384:walk_rl/experiments/v8e_long_16k.yaml
+  - id: v8e_lab
+    parent: v8e
+    model: M0
+    measured_on: {isaac: M0}  # evaluated on its own branch, before M1 reached it
+    stack: isaaclab
+    change: the same config on the Isaac Lab port
+    why: platform comparison
+    result: evaluated on Isaac Sim 0.98-1.00, so training is at parity; std ran away to 34.6
+    verdict: superseded
+    lesson: same config and seed train different policies on the two stacks; compare statistically
+  - id: v8e_lab_rsl
+    parent: v8e
+    model: M0
+    stack: isaaclab + rsl_rl
+    change: rsl_rl PPO instead of the in-repo PPO
+    why: trainer comparison
+    result: stopped at iteration 2475 of 3000 when the GPU went to v9; never evaluated
+    verdict: aborted
+  - id: v9p
+    parent: v8e
+    model: M1
+    change: corrected robot model, torso-inertia and wood-friction randomization, std cap 0.5
+    why: physics baseline for every v9 ablation
+    result: hard survival 0.98; sideways drift 1.13 m per 20 s at 0.20
+    verdict: superseded
+    config: 0047918:walk_rl/experiments/v9p_physics.yaml
+  - id: v9a
+    parent: v9p
+    model: M1
+    change: + lateral_drift, roll_band, foot_flat
+    why: v8d crabs ~1 m per 20 s to +y
+    result: drift 0.26 m per 20 s (v9p 1.13), roll 15 deg; MuJoCo 7 falls of 27
+    verdict: base
+    config: 7fbf07e:walk_rl/experiments/v9a_lateral.yaml
+  - id: v9b
+    parent: v9a
+    model: M1
+    change: + mirror augmentation
+    why: the limp behind the crab is learned (CAD symmetric to 3 mm)
+    result: even gait, drift 0.17 m, but hard survival 0.82 and 8 deg yaw while standing
+    verdict: rejected
+    lesson: hard mirror augmentation costs robustness
+    config: 0047918:walk_rl/experiments/v9b_symmetry.yaml
+  - id: v9c
+    parent: v9a
+    model: M2
+    change: + actuator.model lx16a
+    why: no earlier policy walks on the fitted servo (walking survival 0.02-0.46)
+    result: walking survival 0.99-1.00 on the fitted servo, MuJoCo 27/27; stands below ~0.12 m/s
+    verdict: superseded
+    lesson: measure the hardware early; the 4x slower servo invalidated every earlier policy
+    config: 4520314:walk_rl/experiments/v9c_actuator.yaml
+  - id: v9d
+    parent: v9c
+    model: M2
+    change: track_vx sigma relative to the command, both-feet gait contact, slow-command oversampling
+    why: standing earned ~50 % of track_vx at 0.05 m/s
+    result: 99 % of 0.10 in Isaac, MuJoCo 36/36; still stands below ~0.08
+    verdict: superseded
+    lesson: a fixed tracking kernel lets standing win at slow commands
+    config: d05b2e2:walk_rl/experiments/v9d_slow_gait.yaml
+  - id: v9e
+    parent: v9d
+    model: M3
+    change: tibia action scale 90 deg
+    why: reach the forward-knee range
+    result: walks only from 0.15 m/s; push survival 0.69 (v9d 0.84)
+    verdict: rejected
+    lesson: a wider action scale doubles exploration noise and halves resolution
+    config: 8c2e1cb:walk_rl/experiments/v9e_knee_range.yaml
+  - id: v9f
+    parent: v9d
+    model: M3
+    change: tibia +-67.5 deg about +22.5 deg (shifted action centre)
+    why: the knee range without v9e's resolution loss
+    result: stands at every command
+    verdict: rejected
+    config: b69185e:walk_rl/experiments/v9f_knee_shift.yaml
+  - id: v9g
+    parent: v9d
+    model: M4
+    change: none (v9d recipe on the measured robot)
+    why: control for v9f
+    result: drifted to standing once pushes started (~iteration 500); stopped at 908
+    verdict: rejected
+    lesson: the standing trap - heading and yaw rewards pay standing almost as much as walking
+    config: af2091b:walk_rl/experiments/v9g_control.yaml
+  - id: v9h
+    parent: v9g
+    model: M4
+    change: reward.progress_gate (posture and smoothness rewards scale with v_x / cmd)
+    why: break the standing trap
+    result: walks again, but at 0.10-0.16 m/s whatever the command; MuJoCo 21/36
+    verdict: superseded
+    config: fde54b2:walk_rl/experiments/v9h_progress_gate.yaml
+  - id: v9i
+    parent: v9h
+    model: M4
+    change: progress_gate_mode tracking (gate peaks at the command)
+    why: v9h ignored the command
+    result: tracks 0.05-0.15 at 85-93 %; MuJoCo 32/36; video worse than v9c/v9d (scoots, left foot steps back)
+    verdict: superseded
+    lesson: Isaac-only metrics can hide a scoot; add a gait scorecard
+    config: 7e2670e:walk_rl/experiments/v9i_tracking_gate.yaml
+  - id: v9j
+    parent: v9i
+    model: M4
+    change: + leg_symmetry (1 s mean of left - right femur/tibia), weak base_height
+    why: tibias 61 deg apart in v9i
+    target: femur / tibia L-R <= 10 deg
+    result: legs symmetric (-1 / +4 deg), drift 9 % of forward distance (v9i 142 %)
+    verdict: superseded
+    config: e09617f:walk_rl/experiments/v9j_posture.yaml
+  - id: v9k
+    parent: v9j
+    model: M4
+    change: + joint_pose on head and tail
+    why: head and tail pinned at a range end move the CoM < 2 mm and caused falls
+    result: head/tail near neutral, steps 1.1 / 1.1 cm; MuJoCo speed 43 % of 0.10
+    verdict: superseded
+    config: 0053568:walk_rl/experiments/v9k_head_tail.yaml
+  - id: v9l
+    parent: v9k
+    model: M4
+    change: foot_slip at the sole centre, weight -100
+    why: replay showed ~60 % of Isaac progress was the soles skating
+    result: learned to stand
+    verdict: rejected
+    lesson: a penalty as large as half the reward makes standing the optimum; size weights against the per-step reward
+    config: 5d470ff:walk_rl/experiments/v9l_sole_slip.yaml
+  - id: v9m
+    parent: v9k
+    model: M4
+    change: foot_slip at the sole centre, weight -10
+    why: same as v9l at a size that keeps walking cheaper than standing
+    result: sole slide 140 mm (v9k 541); Isaac 88 % of 0.10, MuJoCo 52-59 %
+    verdict: deployed
+    real: "2026-10-20 floor, 0.10 m/s for 10 s: 0.41 m (41 %), no fall, yaw +7 deg"
+    lesson: the real robot made 41 % where Isaac said 88 % and MuJoCo 52-59 %
+    config: 3a021e3:walk_rl/experiments/v9m_slip10.yaml
+  - id: v9n
+    parent: v9m
+    model: M5
+    change: servo model refit to the real walks (randomization re-centred) + IMU mount offset +-2 deg
+    why: real servos held their goals within 0.5 deg where both sims gave 2-5 deg; 1-3 deg attitude offsets swung v9m between 0 and 0.08 m/s
+    target: MuJoCo speed >= 70 % of 0.10; speed stable under 1-3 deg IMU offsets
+    result: MuJoCo 72 %, stable under IMU offsets; left hip at its range end 55 %, steps 0.4 / 2.7 cm
+    verdict: deployed
+    real: "2026-10-21 floor, 0.10 m/s for 10 s: 0.25 m (25 %), turned +49 deg; head -14, tail +18, hips +3 / -9 deg mean"
+    lesson: a one-sided posture that only drifts 5 deg in MuJoCo turned 49 deg on the real floor
+    config: f20acf4:walk_rl/experiments/v9n_servo_refit.yaml
+  - id: v9o
+    parent: v9n
+    model: M5
+    change: + mirror loss 0.5 (soft left/right symmetry)
+    why: the real v9n turn came from a learned one-sided posture, also visible in MuJoCo and Isaac
+    target: head/tail mean within +-5 deg; left hip at its end <= 20 %; Isaac steps within 2x; keep MuJoCo >= 70 % and IMU-offset robustness
+    result: head/tail -1 / -1 deg, no joint at a range end, MuJoCo heading change -0.2 deg, MuJoCo 70 %; steps 1.6 / 0.8 cm (2.0x); drifts sideways 43 % of forward distance in MuJoCo
+    verdict: deployed
+    real: "2026-10-21 floor, 0.10 m/s for 10 s: 0.46 m (46 %), yaw -8 deg, slight drift right, no crab; head -1, tail -2, hips -7 / -3 deg mean"
+    lesson: the soft mirror loss removed the real turn and gave the best real speed so far; the MuJoCo sideways drift did not transfer
+    config: 92b3140:walk_rl/experiments/v9o_mirror_loss.yaml
+  - id: v9q
+    parent: v9o
+    model: M6
+    change: training friction down to the measured floor (0.12-0.85 effective via ground friction 0.1; was 0.30-0.85)
+    why: real wood is static mu 0.27 (tilt test), below the training range; on M6 v9o makes 34 / 67 / 75 % of 0.10 in MuJoCo at mu 0.15 / 0.20 / 0.27
+    target: MuJoCo >= 60 % of 0.10 at mu 0.15, 0.20, 0.27; MuJoCo survival >= 35/36 and no fall at mu 0.15; head/tail mean within +-5 deg, no joint at a range end > 20 %; real floor >= 50 %
+    result: "MuJoCo 80-91 / 82-91 / 81-84 % of 0.10 at mu 0.15 / 0.20 / 0.27, 36/36 at low mu; head/tail -1 / +5 deg; right hip at its +7 deg inward end 49-51 % while walking (hips -8 / +2 deg); Isaac 46 % at 0.05, hard survival 0.91; side drift 15 %"
+    verdict: candidate
+    lesson: the low-friction training range fixed the MuJoCo low-friction speed, but on M6 the policy rides the hip goal clip; the joint-limit penalty only sees the symmetric +-30 deg limit, not the +7 deg inward range end
+    config: 54f8efb:walk_rl/experiments/v9q_low_friction.yaml
+  - id: v9r
+    parent: v9o
+    model: M6
+    change: none (v9o recipe retrained on M6); control run for v9q
+    why: v9q changes the robot model and the training friction together; v9r isolates the model change
+    target: same as v9q; hypothesis - keeps v9o's weakness at mu 0.15
+    result: "MuJoCo 68-144 % of 0.10 at mu 0.15-0.27 (overspeed), 36/36; stands with both hips at +6 deg (inward end 100 %), does not walk at 0.05 (1 %, tail +25 deg); roll spread 22 deg; Isaac hard survival 0.88"
+    verdict: rejected
+    lesson: hypothesis false - M6 alone does not keep v9o's low-friction weakness, but the v9o recipe on M6 parks both hips on the inward goal clip and stops walking at 0.05; M6 needs a range-aware limit penalty
+    config: 147ced1:walk_rl/experiments/v9r_m6_control.yaml
+  - id: v9s
+    parent: v9q
+    model: M6
+    change: + joint-limit penalty over the last 3 deg of the physical range (reward.joint_limit_range_margin_deg 3)
+    why: on M6 v9q kept its right hip on the +7 deg inward goal clip 49-51 % of the walk and v9r parked both hips there; the symmetric +-30 deg penalty did not see that end
+    target: no joint at a range end > 20 %; hips mean within +-5 deg, left - right within 4 deg; keep MuJoCo >= 60 % of 0.10 at mu 0.15 / 0.20 / 0.27 and survival >= 35/36; Isaac >= 60 % at 0.05; real floor >= 50 %
+    result: "no joint at a range end (hips <= 3 %), hips -2 / -2 deg, heading change 0 deg in the video; MuJoCo 61-71 / 56-66 / 81-87 % of 0.10 at mu 0.15 / 0.20 / 0.27, 36/36; Isaac 99 / 90 / 82 % at 0.05 / 0.10 / 0.15; head +15 deg while standing (+6 walking); Isaac hard survival 0.78 at 0.25 (0.95 at 0.10); scorecard 8/10"
+    verdict: deployed
+    real: "2026-10-22 wood floor, 0.10 m/s for 10 s: 0.36 m (36 %), yaw -1 deg net (+6 deg on a first run without video); hips -2 / -2 deg, head +6, tail +3 deg; joint swing 2-3 deg. Carpet, same schedule: > 0.70 m (> 70 %), yaw +54 / +15 deg (two runs), left hip ~2 deg more inward"
+    lesson: the best sim scorecard gave a worse real walk than v9o; the hip fix transferred (posture as in MuJoCo), but v9s shuffles - joint swing 2-3 deg and foot lift 5.8 mm (v9o 5-8 deg, 14-16 mm) - so its sim speed relied on contact effects the floor does not give; on carpet the same policy made > 70 %, so the wood loss is foot slip, not the gait command; add a foot-lift target to the scorecard
+    config: 7eb3a57:walk_rl/experiments/v9s_range_limit.yaml
+  - id: v9t
+    parent: v9s
+    model: M6
+    change: swing_clearance reward weight 2 -> 8 (foot lift)
+    why: v9s shuffled (foot lift 6 mm, joint swing 2-3 deg) and made 36 % on wood but > 70 % on carpet; its clearance reward fell to a quarter of v9o's
+    target: MuJoCo foot lift >= 12 mm each foot; femur and tibia swing >= 4 deg; keep no joint at a range end > 20 %, hips within +-5 deg, MuJoCo >= 60 % of 0.10 at mu 0.15 / 0.20 / 0.27, survival >= 35/36, Isaac >= 60 % at 0.05; real wood >= 50 %
+    result: "foot lift 39 mm, joint swing hips 8 / femurs 10 / tibias 12 deg std (v9s 2-3) - a stepping gait; MuJoCo 36/36, 100 % of 0.10 (home model 119 / 91 / 59 % at 0.05 / 0.10 / 0.20), 58-65 / 55-72 / 58-77 % of 0.10 at mu 0.15 / 0.20 / 0.27 (target 60: two of nine conditions miss); hips -6 / -6 deg (target +-5: miss); tibias at the -45 deg end 17 % median, 33 % worst episode; roll spread 19 deg (v9s 5); Isaac 95 / 84 / 70 % at 0.05 / 0.10 / 0.15, hard survival 0.89; head -22 to -35 deg while walking; scorecard 8/11"
+    verdict: rejected
+    real: "2026-10-23 wood floor, 0.10 m/s for 10 s: barely moved forward, turned on the spot +78 deg left (log yaw); +37 deg in the first 2 s, while it goes from the standing pose (tibias +45, femurs +10 deg) to the walking crouch (femurs -26, tibias -10 to -13 deg), then +40 deg over 9 s; joint swing 5-7 deg (v9s 2-3), roll -2..+6 deg, no fall. Carpet, same schedule (after two USB-adapter resets, nothing moved): joint swing 8-11 deg, roll -17..+7 deg, yaw +64 deg by the stop; fell 0.7 s after the command went to 0 (head swung to +41 deg, tilt 55 deg forward-left, safety stop). Carpet run 2 (2026-10-23, no fall): ~0.70 m forward and ~0.40 m to the left (0.81 m straight line), yaw about +34 deg net, roll -12..+14 deg, joint swing 7-12 deg. Wood run 2 (2026-10-23): ~0.50 m forward (50 %, the best wood result; v9o 46 %) and ~0.20 m to the right, then it hit a wall on its right; yaw at most -17 deg, +4 deg net; roll +2..+8 deg; joint swing 4-8 deg; no fall. Wood runs 3-5 (2026-10-23): turned > 100 deg left at some point in every run (+88 / +74 / +65 deg net), distances not measured"
+    lesson: wood results vary run to run (0 m with a 78 deg turn, then 0.50 m nearly straight), so one floor run is not enough to judge a policy; carpet ~70 % forward, as v9s, but 40 cm to the left; a high-lift crouched gait on a slippery floor pivots instead of walking; the 55 deg stand-to-walk posture change twists the robot at the start
+    config: 22baef8:walk_rl/experiments/v9t_foot_lift.yaml
+  - id: v9u
+    parent: v9s
+    model: M7
+    change: none (v9s recipe retrained on M7, joint limits v2)
+    why: the sim joint ranges were CAD estimates; the hand-measured stops differ (head +35, tibias -35..+75, femurs +-50, hips -45..+7); v9t sat on the sim tibia -45 end, 10 deg past the real stop
+    target: MuJoCo survival >= 35/36, >= 90 % of 0.10, >= 60 % of 0.10 at mu 0.15 / 0.20 / 0.27; no joint at a range end > 20 %; hips mean within +-5 deg; scorecard >= 8/11; real wood >= 36 % with |yaw| <= 25 deg in every run, carpet >= 70 %
+    verdict: aborted
+    result: stopped after 7 min (iteration ~130); with the +-45 / hips +-30 action scale the policy could not reach the v2 limits and its goals were still clipped to the range; replaced by v9v
+    config: 6bb7d71:walk_rl/experiments/v9u_limits_v2.yaml
+  - id: v9v
+    parent: v9s
+    model: M7
+    change: actions.scale_to_range (action mapped onto the physical range of joint limits v2, no range clip)
+    why: Sachin - what the policy learns is the goal sent to the robot; with the +-45 scale v9u could not reach the v2 limits (femurs +-50, tibias +75, hips -45) and was clipped at head +35 and tibias -35
+    target: MuJoCo survival >= 35/36, >= 90 % of 0.10, >= 60 % of 0.10 at mu 0.15 / 0.20 / 0.27; no joint at a range end > 20 %; hips mean within +-5 deg; scorecard >= 8/11; real wood >= 36 % with |yaw| <= 25 deg in every run, carpet >= 70 %
+    verdict: candidate
+    result: sim - MuJoCo 36/36, 86 % of 0.10 (target 90 %, missed; home model 84 %), 68 / 69 / 76 % of 0.10 at mu 0.15 / 0.20 / 0.27 (v9s 66 / 62 / 84), no fall; worst joint at a range end right hip 1 %; hips mean -4.7 / -4.2 deg; foot lift min 10 mm (v9s 6, v9t 39); roll spread 8 deg; scorecard 8/11; mean tibia L/R +7 / 0 deg at mu 0.27; real robot not tested yet
+    config: 464bdf5:walk_rl/experiments/v9v_full_range.yaml
+  - id: v9w
+    parent: v9v
+    model: M7
+    change: reward joint_speed -2.0 = relu(weighted mean |joint vel| - 0.7 rad/s), tail weight 2
+    why: v9v reset the USB servo adapter twice on wood (8 s, 11 s); hanging it sagged the servo supply to 4.97 V (v9s 6.01 V) at 88 deg/s mean joint speed (v9s 48), tail swing 54 deg (v9s 14); MuJoCo agrees (81 deg/s, tail 136 deg/s; v9s 43 / 20)
+    target: MuJoCo mean joint speed <= 50 deg/s and tail <= 40 deg/s at 0.10 / mu 0.3; MuJoCo survival >= 35/36, >= 90 % of 0.10, >= 60 % of 0.10 at mu 0.15 / 0.20 / 0.27; no joint at a range end > 20 %; hips mean within +-5 deg; scorecard >= 8/11; hanging lowest servo supply >= 6.0 V; real wood no adapter reset, >= 36 % with |yaw| <= 25 deg every run; carpet >= 70 %
+    verdict: candidate (sim speed target missed)
+    result: sim - MuJoCo 36/36, 71 % of 0.10 (target 90 %, missed; v9v 86 %, v9s 105 %), 79 / 77 / 74 % at mu 0.15 / 0.20 / 0.27, no fall; mean joint speed 31-35 deg/s (target <= 50; v9v 81), tail 2-6 deg/s (target <= 40; v9v 136); worst joint at a range end head 0 %; hips mean -4.6 / -4.7 deg (-5.2 at mu 0.15); foot lift min 11 mm; Isaac saturation 0.1 %; scorecard 8/11; the speed cost traded forward speed (the stated risk); real robot not tested yet. 2026-10-24 v9s on wood also sagged the servo supply to 4.81 V with no adapter reset, so the hanging >= 6.0 V target is no longer a test of the reset cause
+    config: df0e855:walk_rl/experiments/v9w_joint_speed.yaml
