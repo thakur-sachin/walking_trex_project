@@ -1,0 +1,219 @@
+# Trex robot physical/actuation parameters.
+#
+# This is the swappable source of truth for everything the raw URDF doesn't
+# capture correctly (it's a bare Fusion2URDF export: no joint limits, no real
+# servo specs, and base_link mass in the URDF lumps in battery/Pi/hip-servo
+# mass in a way that hasn't been measured). Code should read this file rather
+# than hardcode these numbers, so a real measurement can replace a guess
+# without touching any Python.
+#
+# Last updated: 2026-10-13. Several fields are explicitly flagged TODO below
+# -- those are placeholders pending real measurement, not verified values.
+
+mass:
+  # Whole base_link assembly: 3D-printed PLA shell + battery + Raspberry Pi 4
+  # + the 2 hip servos, all lumped together as one rigid body in the URDF.
+  # TODO(sachin): replace with a real reading from a scale.
+  base_link_kg: 1.0
+  # base_link inertia tensor. The URDF's base_link is a hollow shell exported
+  # from Fusion with its default STEEL material: 2.59 kg / 330.6 cm3 of mesh =
+  # 7.85 g/cm3 (every other link is ~1.06 g/cm3 plastic). So the URDF inertia
+  # is a steel shell's. On the robot the shell is printed plastic and most of
+  # the mass is the battery inside it, with the Pi, hip servos and wiring
+  # (Sachin, 2026-10-16).
+  #   urdf             keep the URDF tensor (v1-v8 behaviour; 2.6x a 1.0 kg
+  #                    shell, ~5x the composite estimate)
+  #   scale_with_mass  the same shell shape scaled to base_link_kg (all the
+  #                    mass in the walls: overestimates)
+  #   composite        shell mesh at `shell_density_kg_m3` + the rest of
+  #                    base_link_kg as one solid box centred on the shell's
+  #                    centre of mass (battery + Pi + servos lumped). ESTIMATE
+  #                    until the battery's mass, size and position are known;
+  #                    training randomizes it (base_inertia_scale_range).
+  base_link_inertia: composite
+  composite:
+    shell_density_kg_m3: 1240.0 # PLA, thin walls printed solid -> 0.41 kg shell
+    payload_box_m: [0.10, 0.07, 0.04] # TODO(sachin): battery pack size; x fwd, y left, z up
+
+joints:
+  # All 10 joints are URDF `continuous` (unbounded) -- these limits are
+  # authored onto the USD after import, not in the URDF itself.
+  default_limit_deg: 45.0
+  overrides_deg:
+    left_hip_joint: 30.0
+    right_hip_joint: 30.0
+
+  # The real robot has only 8 servos: head, tail, and 3 per leg (hip, femur,
+  # tibia). There is no ankle servo -- the ankle angle is set mechanically by
+  # a double 4-bar parallelogram linkage that keeps the foot parallel to
+  # base_link at all times. See `ankle_linkage` below for the confirmed
+  # geometry and relationship (CONFIRMED + IMPLEMENTED 2026-10-09).
+  #
+  # "Passive" means no independent servo/actuator -- NOT "no drive". The
+  # ankle DOF is driven with the same stiffness/damping as the actuated leg
+  # joints (passive_joint_drive below), with its *target* computed each call
+  # from the real linkage relationship (enforce_ankle_linkage() in
+  # scripts/test_load_robot.py) rather than commanded independently. Real
+  # stiffness is required for the computed target to actually hold against
+  # gravity -- a zero-stiffness "free" ankle (the original stand-in, before
+  # the relationship was confirmed) drifts away from any target almost
+  # immediately (verified live: commanded 20deg, read back ~1deg a few
+  # physics steps later).
+  #
+  # POLICY INTERFACE (DECIDED 2026-10-09): the RL policy's action space is
+  # exactly `actuated_joints` below (8 DOF) -- NOT all 10 joints. The ankles
+  # are never policy-commanded; their drive target is derived every control
+  # step from the policy's femur/tibia targets via
+  # RobotConfig.ankle_angle_from_linkage() (ankle = femur - tibia), matching
+  # the real hardware where the ankle is purely mechanical. Reason: a policy
+  # that could command the ankles would learn to use a DOF the physical robot
+  # doesn't have, and it can't be deployed on 8 servos. This is by
+  # construction: if an ankle servo is ever added, move it from
+  # passive_joints to actuated_joints and the action space follows. The
+  # policy should likewise only observe the 8 actuated joints (the real
+  # robot has no ankle position feedback -- see `sensors` below).
+  actuated_joints:
+    - head_joint
+    - tail_joint
+    - left_hip_joint
+    - right_hip_joint
+    - left_femur_joint
+    - right_femur_joint
+    - left_tibia_joint
+    - right_tibia_joint
+  passive_joints:
+    - left_ankle_joint
+    - right_ankle_joint
+  passive_joint_drive:
+    stiffness: 40.0 # same as the "legs" sim_drive group -- the real linkage is rigid
+    damping: 5.0
+
+ankle_linkage:
+  # Confirmed by Sachin on 2026-10-09, cross-checked against sim joint-axis
+  # spacing (both legs, exact symmetric match). Each leg has a *stacked pair*
+  # of planar 4-bar parallelogram mechanisms, both operating in the same
+  # plane as femur_joint/tibia_joint/ankle_joint (all three share the same
+  # rotation axis -- confirmed from the URDF). Only the "main" link of each
+  # pair (tibia, ankle) is in the URDF; the other 3 links of each 4-bar
+  # (idler bars + their pivots) are omitted entirely to simplify the model --
+  # not just un-meshed, structurally absent from the kinematic chain. So
+  # these dimensions describe the real mechanism; they are NOT fully
+  # reproducible as a sim constraint without the idler pivot geometry too.
+  upper_parallelogram:
+    # Spans tibia_joint -> ankle_joint (confirmed: sim gives exactly 65.00mm
+    # for this span at the neutral pose, matching this measurement exactly).
+    between_joints: [tibia_joint, ankle_joint]
+    x_mm: 50.0 # perpendicular offset of the idler bar; not derivable from the
+    # current URDF (its 3 other links aren't modeled) -- Sachin's direct
+    # measurement, authoritative.
+    z_mm: 65.0 # main span; matches sim's joint-axis spacing, as expected for
+    # a true parallelogram (the coupler bar's length must equal this for the
+    # parallelism constraint to hold at all).
+  lower_parallelogram:
+    # Spans femur_joint -> tibia_joint (sim gives 55.01mm; Sachin's direct
+    # measurement of 54mm is the authoritative value -- the ~1mm gap is
+    # plausible manufacturing tolerance, not a modeling error).
+    between_joints: [femur_joint, tibia_joint]
+    x_mm: 50.0
+    z_mm: 54.0
+  # CONFIRMED + IMPLEMENTED 2026-10-09 (Sachin approved implementing this).
+  # Derived from "all three joints share one *physical* rotation axis" + "the
+  # foot stays parallel to base_link at every femur/tibia configuration"
+  # (both confirmed facts): for the net rotation about that shared axis to
+  # stay constant, the three relative rotations must sum to zero (true at
+  # the neutral pose, where all three DOF values are 0 and the foot is flat).
+  #
+  # IMPORTANT: the URDF's <axis> for femur_joint is (0,-1,0) while
+  # tibia_joint and ankle_joint are both (0,+1,0) -- opposite sign from
+  # femur, same as each other, for BOTH legs (not mirrored left vs right).
+  # A naive same-sign sum (ankle = -(femur+tibia)) was tried first and is
+  # WRONG by a large margin -- verified live in Isaac Sim, it left the foot
+  # ~44deg off parallel instead of 0. Accounting for the sign flip
+  # (-femur_angle + tibia_angle + ankle_angle = 0) gives the correct one:
+  #     ankle_joint_angle = femur_joint_angle - tibia_joint_angle
+  # Verified two ways: analytically via Gf.Rotation composition (exact
+  # 0.0000deg residual) and live in Isaac Sim (foot visually and numerically
+  # parallel to base_link across a range of femur/tibia angles).
+  #
+  # Implemented as common.robot_config.RobotConfig.ankle_angle_from_linkage()
+  # + scripts/test_load_robot.py's enforce_ankle_linkage() -- a per-call
+  # kinematic enforcement (teleports the ankle DOF to match), not a native
+  # PhysX constraint: PhysxMimicJointAPI/NewtonMimicAPI only support a single
+  # reference joint (jointPosition + gearing*referenceJointPosition + offset
+  # = 0), not a two-term relationship, so this isn't natively expressible as
+  # one mimic joint. Caveat: being a per-call enforcement (not a
+  # continuously-solved constraint), it only holds at the instants it's
+  # called -- a future continuous RL/control loop needs to call it every
+  # step, not just once after setting femur/tibia.
+  relationship: "ankle_joint_angle = femur_joint_angle - tibia_joint_angle"
+  # How the simulators enforce it:
+  #   teleport         v1-v8: ankle DOF set to femur - tibia every physics
+  #                    substep, the passive_joint_drive PD aimed at the same
+  #                    angle. The PD hands every moment on the foot to the tibia
+  #                    link, so the femur/tibia servos carry the foot's ground
+  #                    moment. On the robot the parallelogram routes it through
+  #                    its bars into base_link (the foot's angle to base_link is
+  #                    fixed, so a moment on the foot does no work through femur
+  #                    or tibia).
+  #   teleport_routed  the same, plus the ankle drive's torque tau_a is applied
+  #                    as the linkage's generalized force on the rest of the leg
+  #                    (femur -tau_a, tibia +tau_a: the coefficients of
+  #                    -femur + tibia + ankle = 0), so the servos stop carrying it.
+  #                    Servo torque readings exclude that routed part.
+  # Tried and rejected (2026-10-16): a PhysX fixed tendon over the three joints
+  # (the exact generalized-force model) -- on this 72 g foot it is either too
+  # soft to hold the foot (stiffness <= 0.5: 2-4 deg error, falls) or goes NaN
+  # (>= 1, also at 1 kHz physics; damping makes it worse).
+  sim_model: teleport_routed
+
+actuator:
+  # Hiwonder LX-16A serial bus servo.
+  # Datasheet: https://cdn.compacttool.ru/downloads/LX16A.pdf
+  model: LX-16A
+  voltage_v: 7.4
+  stall_torque_kgcm: 17.0 # 15.0 kgcm at 6V
+  stall_torque_nm: 1.6671 # 17 kgf*cm -> N*m (x0.0980665)
+  no_load_speed_deg_per_sec: 375.0 # 0.16 sec/60deg at 7.4V
+  no_load_speed_rad_per_sec: 6.545
+  position_accuracy_deg: 0.24
+  feedback: [position, temperature, voltage]
+  control: serial_bus
+  baud_rate: 115200
+  weight_g: 52
+
+# Sim-only PD drive gains (Isaac Sim's ImplicitActuator model needs
+# stiffness/damping; these are not physical servo properties -- they're
+# tuned to approximate a position-controlled servo's closed-loop response).
+# Separate per joint group since legs carry more load than head/tail.
+sim_drive:
+  legs:
+    joint_pattern: ".*(hip|femur|tibia).*"
+    stiffness: 40.0
+    damping: 5.0
+  auxiliary:
+    joint_pattern: "head_joint|tail_joint"
+    stiffness: 10.0
+    damping: 1.0
+
+materials:
+  # Simple two-tone T-Rex look: green reptilian skin on the body/legs, dark
+  # claws/feet for contrast. Cosmetic only -- swap colors here, not in code.
+  skin:
+    color_rgb: [0.21, 0.32, 0.14] # forest green
+    roughness: 0.6
+    links: [base_link, head, tail, left_femur, right_femur, left_tibia, right_tibia]
+  claws:
+    color_rgb: [0.10, 0.08, 0.07] # near-black dark brown
+    roughness: 0.4
+    links: [left_ankle, right_ankle, left_foot, right_foot]
+
+sensors:
+  imu:
+    model: BNO055
+    location: base_link
+  servo_position_feedback: true # all 8 actuated joints report position
+  feet_contact: false
+  camera: null # placeholder: Realsense D435 possible later, not installed
+
+compute:
+  onboard: "Raspberry Pi 4 (8GB)"

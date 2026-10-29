@@ -1,0 +1,8 @@
+# Ablation: v8 observations + rewards, but v7's robustness settings (no pushes, v7 mass DR).
+# Overlaid on walk_rl/walk_task.yaml:  python walk_rl/train.py --name v8b --task walk_rl/experiments/v8b_no_robustness.yaml
+push:
+  enabled: false
+domain_randomization:
+  base_mass_scale_range: [0.8, 1.3]
+  limb_mass_scale_range: [1.0, 1.0]
+  base_com_offset_m: 0.0

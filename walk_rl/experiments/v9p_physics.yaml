@@ -1,0 +1,20 @@
+# v9p: v8e's task on the corrected robot model (robot_config, branch v9-tier-a):
+#   - base_link inertia: composite estimate (PLA shell + battery/electronics box), ~5x below the URDF steel shell
+#   - ankle torque routed through the linkage (femur/tibia servos no longer carry foot moments)
+# The baseline every v9 ablation is compared with. Ablation size: 4096 envs, 1500 iterations
+# (~1.2 h at the v8d rate), pushes ramped over iterations 500-1200 to v8e's 0.35 m/s.
+# Run: python walk_rl/train.py --name v9p --iterations 1500 --task walk_rl/experiments/v9p_physics.yaml
+gait:
+  frequency_per_mps: 4.0
+push:
+  start_iter: 500
+  end_iter: 1200
+  max_lin_vel_mps: 0.35
+ppo:
+  max_action_std: 0.5 # v8e std ran away to ~1 under 0.35 m/s pushes
+domain_randomization:
+  # torso inertia is a composite ESTIMATE (robot_config): x0.6-1.6 on top of the mass scaling
+  base_inertia_scale_range: [0.6, 1.6]
+  # PLA sole on indoor wood (Sachin): PhysX averages robot and ground (0.5) friction, so
+  # 0.1-1.2 here = 0.30-0.85 effective (was 0.45-0.85; PLA on wood is probably ~0.3-0.4)
+  friction_range: [0.1, 1.2]

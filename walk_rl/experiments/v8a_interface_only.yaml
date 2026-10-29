@@ -1,0 +1,19 @@
+# Ablation: only the v8 observation/sensor changes (history, heading obs + its reward, per-episode delays,
+# encoder offsets) on v7's rewards, command range and robustness settings.
+push:
+  enabled: false
+command:
+  vx_range_mps: [0.05, 0.20]
+domain_randomization:
+  base_mass_scale_range: [0.8, 1.3]
+  limb_mass_scale_range: [1.0, 1.0]
+  base_com_offset_m: 0.0
+reward:
+  track_vx_sigma: 0.08
+  weights:
+    track_vx_lin: 0.0
+    base_acc: 0.0
+    base_rock: 0.0
+    stand_still: 0.0
+    torque_sat: 0.0
+    feet_distance: 0.0

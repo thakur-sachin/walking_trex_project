@@ -1,0 +1,4 @@
+# v8c + speed-scaled gait clock: 1.6 Hz at 0.05 m/s, 1.8 at 0.10, 2.4 at 0.25 (clamped).
+# Hypothesis: v7/v8c undershoot at 0.20+ m/s because a fixed 1.8 Hz clock forces long strides.
+gait:
+  frequency_per_mps: 4.0
